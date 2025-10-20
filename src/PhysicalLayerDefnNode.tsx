@@ -1,9 +1,9 @@
-// nodes/PhysicalLayerDefnNode.tsx
 import React, { memo, useCallback } from "react";
 import { Handle, Position, NodeResizer } from "@xyflow/react";
 import { NodeProps, Node } from "@xyflow/react";
 import JsonEditor from "./JsonEditor";
 import { PhysicalLayer } from "./types/physical-layer";
+import Unscaled from "./unscaled";
 
 type PhysicalLayerData = {
   value: PhysicalLayer;
@@ -29,8 +29,8 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
     <div
       className="nodrag"
       style={{
-        width: 560,
-        height: 420,
+        width: "100%",
+        height: "100%",
         background: "#fff",
         border: "1px solid rgba(0,0,0,0.1)",
         borderRadius: 12,
@@ -39,8 +39,6 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
         overflow: "hidden",
         boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
       }}
-      onMouseDown={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
     >
       <NodeResizer isVisible={!!selected} minWidth={420} minHeight={320} />
 
@@ -53,18 +51,30 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
           fontSize: 13,
           borderBottom: "1px solid #eee",
           background: "#fafafa",
+          userSelect: "none",
         }}
       >
         {data?.title ?? "Physical Layer Definition"}
       </div>
 
-      <div style={{ padding: 8, minHeight: 0 }}>
-        <JsonEditor
-          value={data.value}
-          onChange={handleChange as (v: unknown) => void}
-          mode={data?.mode ?? "code"}
-          height={data?.height ?? 360}
-        />
+      {/* Editor container must be allowed to shrink; minHeight: 0 prevents overflow */}
+      <div
+        style={{
+          padding: 8,
+          minHeight: 0,
+          height: "100%",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ height: "100%", width: "100%" }}>
+          <JsonEditor
+            value={data.value}
+            onChange={handleChange as (v: unknown) => void}
+            mode={data?.mode ?? "form"}
+            height="100%"
+          />
+        </div>
       </div>
 
       <Handle type="target" position={Position.Left} />
