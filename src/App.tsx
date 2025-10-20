@@ -1,5 +1,4 @@
 // App.tsx
-import React from "react";
 import {
   ReactFlow,
   useNodesState,
@@ -58,7 +57,7 @@ export default function App() {
           );
         },
       },
-      style: { width: 560, height: 420 },
+      style: { width: 400, height: 420 },
     },
   ]);
 
