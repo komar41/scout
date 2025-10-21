@@ -26,9 +26,7 @@ const initialValue: PhysicalLayer = {
         schema: {
           id: "numeric",
           geometry: "multipolygons",
-          features: {
-            height: "numeric",
-          },
+          features: { height: "numeric" },
         },
       },
     ],
@@ -44,12 +42,11 @@ export default function App() {
       type: "physicalLayerDefn",
       position: { x: 160, y: 120 },
       data: {
-        title: "Physical Layer (baselayer-0)",
+        title: "Physical Layer Definition",
         value: initialValue,
-        mode: "code",
-        height: 360,
+        // no `mode` needed anymore; the node renders CodeMirror
+        // height: 0,
         onChange: (val, id) => {
-          // keep node.data.value in sync as you edit
           setNodes((nds) =>
             nds.map((n) =>
               n.id === id ? { ...n, data: { ...n.data, value: val } } : n
@@ -57,7 +54,8 @@ export default function App() {
           );
         },
       },
-      style: { width: 400, height: 420 },
+      // give a bit more width so the gutter + padding are comfy
+      // style: { width: 560, height: 460 },
     },
   ]);
 

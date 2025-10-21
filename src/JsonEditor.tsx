@@ -13,7 +13,7 @@ export default function JsonEditor({
   value = {},
   onChange,
   height = 400,
-  mode = "form",
+  mode = "text",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<JSONEditor | null>(null);

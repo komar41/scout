@@ -4,6 +4,7 @@ import { NodeProps, Node } from "@xyflow/react";
 import JsonEditor from "./JsonEditor";
 import { PhysicalLayer } from "./types/physical-layer";
 import Unscaled from "./unscaled";
+import JsonCodeEditor from "./JsonCodeEditor";
 
 type PhysicalLayerData = {
   value: PhysicalLayer;
@@ -40,21 +41,23 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
         boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
       }}
     >
-      <NodeResizer isVisible={!!selected} minWidth={420} minHeight={320} />
+      <NodeResizer isVisible={!!selected} minWidth={300} minHeight={300} />
 
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          padding: "0 12px",
-          fontWeight: 600,
-          fontSize: 13,
+          justifyContent: "center", // ✅ center horizontally
+          // padding: "0 12px",
+          fontWeight: 450,
+          fontSize: 15,
           borderBottom: "1px solid #eee",
-          background: "#fafafa",
+          background: "#6a51a3",
           userSelect: "none",
+          color: "white",
         }}
       >
-        {data?.title ?? "Physical Layer Definition"}
+        {data?.title ?? "Physical layer definition"}
       </div>
 
       {/* Editor container must be allowed to shrink; minHeight: 0 prevents overflow */}
@@ -65,13 +68,16 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
           height: "100%",
           width: "100%",
           boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          textAlign: "left",
         }}
       >
-        <div style={{ height: "100%", width: "100%" }}>
-          <JsonEditor
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <JsonCodeEditor
             value={data.value}
             onChange={handleChange as (v: unknown) => void}
-            mode={data?.mode ?? "form"}
+            // mode={data?.mode ?? "text"}
             height="100%"
           />
         </div>
