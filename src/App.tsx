@@ -36,6 +36,8 @@ const initialValue: PhysicalLayer = {
 const nodeTypes = { physicalLayerDefn: PhysicalLayerDefnNode };
 
 export default function App() {
+  // check how and why the node types are defined...
+  // bring back the formatting!!
   const [nodes, setNodes, onNodesChange] = useNodesState<PhysicalLayerNode>([
     {
       id: "pl-1",
