@@ -36,8 +36,6 @@ const initialValue: PhysicalLayer = {
 const nodeTypes = { physicalLayerDefn: PhysicalLayerDefnNode };
 
 export default function App() {
-  // check how and why the node types are defined...
-  // bring back the formatting!!
   const [nodes, setNodes, onNodesChange] = useNodesState<PhysicalLayerNode>([
     {
       id: "pl-1",
@@ -46,8 +44,6 @@ export default function App() {
       data: {
         title: "Physical Layer Definition",
         value: initialValue,
-        // no `mode` needed anymore; the node renders CodeMirror
-        // height: 0,
         onChange: (val, id) => {
           setNodes((nds) =>
             nds.map((n) =>
@@ -56,8 +52,6 @@ export default function App() {
           );
         },
       },
-      // give a bit more width so the gutter + padding are comfy
-      // style: { width: 560, height: 460 },
     },
   ]);
 

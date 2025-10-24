@@ -1,17 +1,13 @@
-import React, { memo, useCallback } from "react";
+import { memo, useCallback } from "react";
 import { Handle, Position, NodeResizer } from "@xyflow/react";
 import { NodeProps, Node } from "@xyflow/react";
-import JsonEditor from "./JsonEditor";
 import { PhysicalLayer } from "./types/physical-layer";
-import Unscaled from "./unscaled";
 import JsonCodeEditor from "./JsonCodeEditor";
 
 type PhysicalLayerData = {
   value: PhysicalLayer;
   onChange?: (val: PhysicalLayer, id: string) => void;
   title?: string;
-  mode?: "tree" | "code" | "view" | "form" | "text";
-  height?: number | string;
 };
 
 export type PhysicalLayerNode = Node<PhysicalLayerData, "physicalLayerDefn">;
@@ -77,7 +73,6 @@ const PhysicalLayerDefnNode = memo(function PhysicalLayerDefnNode({
           <JsonCodeEditor
             value={data.value}
             onChange={handleChange as (v: unknown) => void}
-            // mode={data?.mode ?? "text"}
             height="100%"
           />
         </div>
