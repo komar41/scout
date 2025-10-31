@@ -8,41 +8,37 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import PhysicalLayerDefnNode, {
-  PhysicalLayerNode,
-} from "./PhysicalLayerDefnNode";
-import type { PhysicalLayer } from "./types/physical-layer";
+import GrammarNodeComponent, { GrammarNode } from "./GrammarNode";
 
-const initialValue: PhysicalLayer = {
+// A valid instance for your current schema
+const initialValue = {
   physical_layer: {
     id: "baselayer-0",
+    datafile: "chicago",
     region_of_interest: {
       type: "bbox",
       value: [-87.9401, 41.6445, -87.5237, 42.023],
     },
     layers: [
       {
-        name: "buildings",
-        schema: {
-          id: "numeric",
-          geometry: "multipolygons",
-          features: { height: "numeric" },
-        },
+        tag: "buildings",
+        features: ["height"], // optional; keep or remove
       },
     ],
   },
 };
 
-const nodeTypes = { physicalLayerDefn: PhysicalLayerDefnNode };
+// Register the new node type
+const nodeTypes = { grammarNode: GrammarNodeComponent };
 
 export default function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<PhysicalLayerNode>([
+  const [nodes, setNodes, onNodesChange] = useNodesState<GrammarNode>([
     {
-      id: "pl-1",
-      type: "physicalLayerDefn",
+      id: "grammar-1",
+      type: "grammarNode",
       position: { x: 160, y: 120 },
       data: {
-        title: "Physical Layer Definition",
+        title: "Grammar",
         value: initialValue,
         onChange: (val, id) => {
           setNodes((nds) =>
