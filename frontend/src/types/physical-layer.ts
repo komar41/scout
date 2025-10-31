@@ -7,14 +7,11 @@ export type PhysicalLayer = {
       value: number[]; // [minLon, minLat, maxLon, maxLat]
     };
     layers: Array<{
-      name: string; // "buildings" | ...
-      schema: {
-        id: string; // "numeric"
-        geometry: string; // "multipolygons" | ... // not required. remove later.
-        features: {
-          height: string; // "numeric" // This has to be generic to support different types nd optional fields
-        };
-      };
+      tag: string; // "buildings" | ...
+
+      features: Array<{
+        height: string; // "numeric" // This has to be generic to support different types nd optional fields
+      }>;
     }>;
   };
 };
