@@ -4,7 +4,8 @@ export type PhysicalLayer = {
     id: string;
     region_of_interest: {
       type: string; // "bbox"  // have to include geojson later and value accordingly
-      value: number[]; // [minLon, minLat, maxLon, maxLat]
+      value: number[]; // [minLon, minLat, maxLon, maxLat] // if bbox have to restrict to 4 numbers
+      // if geojson, value has to be '.geojson' file
     };
     layers: Array<{
       tag: string; // "buildings" | ...
