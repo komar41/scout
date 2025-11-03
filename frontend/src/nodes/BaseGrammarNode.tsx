@@ -164,6 +164,18 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
           <img src={restartPng} alt="Re-run" className="gnode__actionIcon" />
         </button>
       </div>
+
+      {/* CONNECTORS */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="gnode__handle gnode__handle--left"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="gnode__handle gnode__handle--right"
+      />
     </div>
   );
 });

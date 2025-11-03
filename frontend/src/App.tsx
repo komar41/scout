@@ -1,3 +1,4 @@
+// src/App.tsx
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -6,15 +7,17 @@ import {
   Background,
   Controls,
   useReactFlow,
+  addEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useRef, useState } from "react";
 
-import GrammarNodeComponent, { GrammarNode } from "./GrammarNode";
+import { nodeTypes } from "./nodes"; // <-- { physicalLayerNode, viewNode, ... }
+import type { Node, Connection, Edge } from "@xyflow/react";
+import type { BaseNodeData } from "./nodes/BaseGrammarNode";
+
 import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
-
-const nodeTypes = { grammarNode: GrammarNodeComponent } as const;
 
 export default function App() {
   return (
@@ -26,8 +29,11 @@ export default function App() {
 
 function Canvas() {
   const idCounter = useRef(1);
-  const [nodes, setNodes, onNodesChange] = useNodesState<GrammarNode>([]);
-  const [edges, , onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<BaseNodeData>>(
+    []
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const { getNode } = useReactFlow();
 
   const addNode = useCallback(
     (tpl: TemplateKey) => {
@@ -35,6 +41,34 @@ function Canvas() {
       createGrammarNode({ id: nextId, setNodes, template: tpl });
     },
     [setNodes]
+  );
+
+  // --- allow only physicalLayerNode -> viewNode
+  const allow = useCallback(
+    (conn: Connection) => {
+      if (!conn.source || !conn.target) return false;
+      const src = getNode(conn.source);
+      const trg = getNode(conn.target);
+      if (!src || !trg) return false;
+      return src.type === "physicalLayerNode" && trg.type === "viewNode";
+    },
+    [getNode]
+  );
+
+  const onConnect = useCallback(
+    (conn: Connection) => {
+      if (!allow(conn)) return;
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...conn,
+            animated: true,
+          },
+          eds
+        )
+      );
+    },
+    [allow, setEdges]
   );
 
   return (
@@ -46,6 +80,8 @@ function Canvas() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        isValidConnection={allow}
         fitView
       >
         <Background />
@@ -91,7 +127,6 @@ function Toolbar({ onAdd }: { onAdd: (tpl: TemplateKey) => void }) {
         <div role="menu" className="menu">
           <div className="menu__title">Select template</div>
           <div className="menu__divider" />
-
           {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
             <button
               key={key}
@@ -108,20 +143,27 @@ function Toolbar({ onAdd }: { onAdd: (tpl: TemplateKey) => void }) {
   );
 }
 
+// Map template key -> node type key from ./nodes
+const kindToType: Record<TemplateKey, keyof typeof nodeTypes> = {
+  physical_layer: "physicalLayerNode",
+  view: "viewNode",
+};
+
 function createGrammarNode({
   id,
   setNodes,
   template,
 }: {
   id: string;
-  setNodes: ReturnType<typeof useNodesState>[1];
+  setNodes: React.Dispatch<React.SetStateAction<Node<BaseNodeData>[]>>;
   template: TemplateKey;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
+  const type = kindToType[template];
 
-  const newNode: GrammarNode = {
+  const newNode: Node<BaseNodeData> = {
     id,
-    type: "grammarNode",
+    type,
     position: pos,
     data: {
       title: "Grammar",
@@ -133,8 +175,15 @@ function createGrammarNode({
           )
         );
       },
+      onClose: (nodeId) =>
+        setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+      onRun: (nodeId) => console.log("run clicked:", nodeId),
     },
   };
+
+  // console log new nodes node type
+  console.log("Creating new node:", newNode);
+  console.log("Node type:", type);
 
   setNodes((nds) => nds.concat(newNode));
 }
