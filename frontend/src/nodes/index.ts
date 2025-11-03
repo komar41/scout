@@ -1,7 +1,8 @@
+import { BaseNodeData } from "./BaseGrammarNode";
 import PhysicalLayerNode, {
   PhysicalLayerNode as PhysicalLayerNodeType,
 } from "./PhysicalLayerNode";
-import ViewNode, { ViewNode as ViewNodeType } from "./ViewNode";
+import ViewNode, { ViewNode as ViewNodeType, ViewNodeData } from "./ViewNode";
 
 // add more as you implement them:
 // import JoinNode from "./JoinNode"; etc.
@@ -15,4 +16,5 @@ export const nodeTypes = {
   //   choiceNode: ChoiceNode,
 } as const;
 
-export type AnyNodeType = PhysicalLayerNodeType | ViewNodeType;
+export type AnyNode = PhysicalLayerNodeType | ViewNodeType;
+export type AnyNodeData = BaseNodeData | ViewNodeData; // extend as you add nodes
