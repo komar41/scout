@@ -6,7 +6,6 @@ import addFormats from "ajv-formats";
 import JsonCodeEditor from "../components/JsonCodeEditor";
 import "./BaseGrammarNode.css";
 import restartPng from "../assets/restart.png";
-import fetchPng from "../assets/fetch.png";
 
 export type GrammarValue = unknown;
 
@@ -24,6 +23,7 @@ export type BaseNodeData = {
 
   /** Optional extra footer actions (buttons, etc.) */
   footerActions?: React.ReactNode;
+  onFetch?: (id: string) => void;
 };
 
 export type BaseNode = Node<BaseNodeData, string>;
@@ -59,7 +59,7 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
   const innerValue = useMemo(
     () => (data.pickInner ? data.pickInner(data.value) : data.value),
-    [data.pickInner, data.value]
+    [data]
   );
 
   const runValidation = useCallback(
@@ -163,6 +163,8 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
         >
           <img src={restartPng} alt="Re-run" className="gnode__actionIcon" />
         </button>
+
+        {data.footerActions}
       </div>
 
       {/* CONNECTORS */}

@@ -4,12 +4,18 @@ import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/view.json";
 
 export type ViewNodeData = BaseNodeData & {
-  rcvd_data?: {
-    roi?: unknown;
-    from?: string;
-    at?: number;
-    extras?: unknown;
-  };
+  physical_layers?: {
+    id: string;
+    datafile: string;
+    region_of_interest: {
+      type: "bbox" | "geojson";
+      value: number[] | string; // bbox or geojson filename
+    };
+    layers: {
+      tag: string;
+      features: string[];
+    }[];
+  }[];
 };
 
 export type ViewNode = Node<ViewNodeData, "viewNode">;
