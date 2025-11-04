@@ -12,6 +12,9 @@ export type ViewportNodeData = {
   zoom?: number;
   onClose?: (id: string) => void;
   onRun?: (id: string) => void;
+
+  // Have to add that physical layer data here optional
+  // and view spec also optional
 };
 
 export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
