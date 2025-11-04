@@ -38,7 +38,7 @@
   border: 1px solid #e5e7eb;
   background: #f8fafc;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 /* Wrap the Grammar button so its dropdown can be positioned relative to it */
@@ -64,7 +64,7 @@
 }
 
 .menu__title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: #6b7280;
   margin-bottom: 4px;
@@ -86,7 +86,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .menu__item:hover {

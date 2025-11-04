@@ -32,7 +32,7 @@ export const viewTemplate = {
         {
           tag: "buildings",
           style: {
-            fill: { attribute: "height", colormap: "greys" },
+            fill: { feature: "height", colormap: "greys" },
             stroke_color: "#333333",
             opacity: 0.8,
           },

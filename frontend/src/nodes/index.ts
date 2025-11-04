@@ -3,7 +3,7 @@ import PhysicalLayerNode, {
   PhysicalLayerNode as PhysicalLayerNodeType,
 } from "./PhysicalLayerNode";
 import ViewNode, { ViewNode as ViewNodeType, ViewNodeData } from "./ViewNode";
-import RenderNode from "./RenderNode";
+import ViewportNode from "./ViewportNode";
 
 // add more as you implement them:
 // import JoinNode from "./JoinNode"; etc.
@@ -11,7 +11,7 @@ import RenderNode from "./RenderNode";
 export const nodeTypes = {
   physicalLayerNode: PhysicalLayerNode,
   viewNode: ViewNode,
-  renderNode: RenderNode,
+  viewportNode: ViewportNode,
   //   joinNode: JoinNode,
   //   transformationNode: TransformationNode,
   //   interactionNode: InteractionNode,

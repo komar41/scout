@@ -1,4 +1,4 @@
-.rnode {
+.vpnode {
   position: relative;
   width: 100%;
   height: 100%;
@@ -14,7 +14,7 @@
   border-bottom-right-radius: 12px;
 }
 
-.rnode__header {
+.vpnode__header {
   position: relative;
   z-index: 1;
   display: flex;
@@ -28,7 +28,7 @@
   border-top-right-radius: 12px;
 }
 
-.rnode__iconBtn {
+.vpnode__iconBtn {
   border: none;
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
@@ -40,11 +40,11 @@
   font-size: 14px;
   padding: 0;
 }
-.rnode__iconBtn--close {
+.vpnode__iconBtn--close {
   margin-left: 6px;
 }
 
-.rnode__actionBtn {
+.vpnode__actionBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -59,18 +59,18 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.rnode__actionIcon {
+.vpnode__actionIcon {
   width: 18px;
   height: 18px;
   display: block; /* removes baseline gap */
   pointer-events: none;
 }
 
-.rnode__title {
+.vpnode__title {
   color: #fff;
 }
 
-.rnode__body {
+.vpnode__body {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -80,7 +80,7 @@
   overflow: hidden;
 }
 
-.rnode__map {
+.vpnode__map {
   position: relative;
   z-index: 1;
   flex: 1;
@@ -92,7 +92,7 @@
   overflow: hidden;
 }
 
-.rnode__footer {
+.vpnode__footer {
   border-top: 1px solid #eee;
   padding: 6px 8px;
   display: flex;
@@ -104,7 +104,7 @@
   border-bottom-right-radius: 12px;
 }
 
-.rnode__handle {
+.vpnode__handle {
   width: 10px !important;
   height: 10px !important;
   background: #6b7280 !important;
@@ -113,26 +113,26 @@
   z-index: 5;
 }
 
-.rnode__handle--left {
+.vpnode__handle--left {
   top: 55% !important;
   left: 6px !important;
   transform: translateY(-50%) !important;
 }
 
-.rnode__handle--right {
+.vpnode__handle--right {
   top: 55% !important;
   right: 6px !important;
   transform: translateY(-50%) !important;
 }
 
 /* Make resize controls clearly visible and above map */
-.rnode .react-flow__resize-control {
+.vpnode .react-flow__resize-control {
   z-index: 10;
   pointer-events: all;
 }
 
 /* Style the lines */
-.rnode .react-flow__resize-control.line {
+.vpnode .react-flow__resize-control.line {
   border-color: #3367d9; /* slate-400 */
   border-width: 1px;
 }
