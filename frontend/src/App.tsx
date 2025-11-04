@@ -19,6 +19,7 @@ import type { BaseNodeData } from "./nodes/BaseGrammarNode";
 import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
 import { ViewNodeData } from "./nodes/ViewNode";
+import type { RenderNodeData } from "./nodes/RenderNode";
 
 export default function App() {
   return (
@@ -30,9 +31,9 @@ export default function App() {
 
 function Canvas() {
   const idCounter = useRef(1);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<BaseNodeData>>(
-    []
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<
+    Node<BaseNodeData | RenderNodeData>
+  >([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getNode, getEdges } = useReactFlow();
 
@@ -81,17 +82,12 @@ function Canvas() {
         );
 
         // 3) remove all edges touching the closed node
-        // setEdges((eds) =>
-        //   eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
-        // );
+        setEdges((eds) =>
+          eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
+        );
       }
     },
-    [
-      getNode,
-      getEdges,
-      setNodes,
-      // setEdges
-    ]
+    [getNode, getEdges, setNodes, setEdges]
   );
 
   const addNode = useCallback(
@@ -101,6 +97,11 @@ function Canvas() {
     },
     [setNodes, onCloseNode]
   );
+
+  const addRender = useCallback(() => {
+    const nextId = `render-${idCounter.current++}`;
+    createRenderNode({ id: nextId, setNodes });
+  }, [setNodes]);
 
   // --- allow only physicalLayerNode -> viewNode
   const allow = useCallback(
@@ -180,13 +181,19 @@ function Canvas() {
       >
         <Background />
         <Controls position="bottom-right" />
-        <Toolbar onAdd={addNode} />
+        <Toolbar onAdd={addNode} onAddRender={addRender} />
       </ReactFlow>
     </div>
   );
 }
 
-function Toolbar({ onAdd }: { onAdd: (tpl: TemplateKey) => void }) {
+function Toolbar({
+  onAdd,
+  onAddRender,
+}: {
+  onAdd: (tpl: TemplateKey) => void;
+  onAddRender: () => void;
+}) {
   const { screenToFlowPosition } = useReactFlow();
   const [open, setOpen] = useState(false);
 
@@ -206,33 +213,44 @@ function Toolbar({ onAdd }: { onAdd: (tpl: TemplateKey) => void }) {
     [getDropPosition, onAdd]
   );
 
+  const handleAddRender = useCallback(() => {
+    (window as any)._desiredGrammarPos = getDropPosition();
+    onAddRender();
+  }, [getDropPosition, onAddRender]);
+
   return (
     <div className="toolbar">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="toolbar__btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        ➕ Grammar
-      </button>
+      <div className="toolbar__dropdown">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="toolbar__btn"
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          ➕ Grammar
+        </button>
 
-      {open && (
-        <div role="menu" className="menu">
-          <div className="menu__title">Select template</div>
-          <div className="menu__divider" />
-          {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
-            <button
-              key={key}
-              role="menuitem"
-              onClick={() => handleChoose(key)}
-              className="menu__item"
-            >
-              {TEMPLATE_LABELS[key]}
-            </button>
-          ))}
-        </div>
-      )}
+        {open && (
+          <div role="menu" className="menu">
+            <div className="menu__title">Select template</div>
+            <div className="menu__divider" />
+            {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
+              <button
+                key={key}
+                role="menuitem"
+                onClick={() => handleChoose(key)}
+                className="menu__item"
+              >
+                {TEMPLATE_LABELS[key]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button onClick={handleAddRender} className="toolbar__btn">
+        ➕ Render
+      </button>
     </div>
   );
 }
@@ -250,7 +268,9 @@ function createGrammarNode({
   onCloseNode,
 }: {
   id: string;
-  setNodes: React.Dispatch<React.SetStateAction<Node<BaseNodeData>[]>>;
+  setNodes: React.Dispatch<
+    React.SetStateAction<Node<BaseNodeData | RenderNodeData>[]>
+  >;
   template: TemplateKey;
   onCloseNode: (nodeId: string) => void;
 }) {
@@ -279,6 +299,34 @@ function createGrammarNode({
           return nds;
         });
       },
+    },
+  };
+
+  setNodes((nds) => nds.concat(newNode));
+}
+
+function createRenderNode({
+  id,
+  setNodes,
+  data,
+}: {
+  id: string;
+  setNodes: React.Dispatch<
+    React.SetStateAction<Node<BaseNodeData | RenderNodeData>[]>
+  >;
+  data?: { center?: [number, number]; zoom?: number };
+}) {
+  const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
+
+  const newNode: Node<RenderNodeData> = {
+    id,
+    type: "renderNode",
+    position: pos,
+    width: 400,
+    height: 400,
+    data: {
+      center: data?.center ?? [41.881, -87.63],
+      zoom: data?.zoom ?? 14,
     },
   };
 

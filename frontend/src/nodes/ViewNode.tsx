@@ -29,7 +29,7 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
       selected={selected}
       data={{
         ...data,
-        title: data.title ?? "Grammar • view",
+        title: "Grammar • view",
         schema,
         pickInner: (v) => (v as any)?.view,
       }}

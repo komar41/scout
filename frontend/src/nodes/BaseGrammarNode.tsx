@@ -109,7 +109,7 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
   return (
     <div className="gnode">
-      <NodeResizer isVisible={!!selected} minWidth={360} minHeight={320} />
+      <NodeResizer isVisible={!!selected} minWidth={300} minHeight={180} />
 
       {/* Header */}
       <div className="gnode__header">

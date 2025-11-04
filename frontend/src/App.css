@@ -17,18 +17,21 @@
   height: 100%;
 }
 
-/* Toolbar */
+/* Toolbar is just a row; no enclosing white box */
 .toolbar {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 10;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px; /* separation between buttons */
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
+/* Each button styled individually */
 .toolbar__btn {
   padding: 8px 12px;
   border-radius: 10px;
@@ -38,15 +41,25 @@
   font-size: 14px;
 }
 
-/* Dropdown menu */
+/* Wrap the Grammar button so its dropdown can be positioned relative to it */
+.toolbar__dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Dropdown menu anchored to the Grammar button */
 .menu {
-  margin-top: 6px;
+  position: absolute;
+  top: calc(100% + 6px); /* below the button */
+  left: 0;
+  z-index: 30;
+  margin: 0;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 6px;
   background: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: fit-content;
+  width: max-content;
   min-width: 160px;
 }
 

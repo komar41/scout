@@ -10,7 +10,7 @@ export const physicalLayerTemplate = {
     datafile: "chicago",
     region_of_interest: {
       type: "bbox",
-      value: [-87.9401, 41.6445, -87.5237, 42.023],
+      value: [-87.645, 41.875, -87.62, 41.895],
     },
     layers: [
       {
@@ -37,17 +37,17 @@ export const viewTemplate = {
             opacity: 0.8,
           },
         },
-        {
-          tag: "roads",
-          style: { stroke_color: "#444444", width: 1.2 },
-        },
+        // {
+        //   tag: "roads",
+        //   style: { stroke_color: "#444444", width: 1.2 },
+        // },
       ],
     },
-    {
-      thematic_layer: { ref: "S1" },
-      type: "raster",
-      style: { colormap: "reds", legend: true, opacity: 0.7 },
-    },
+    // {
+    //   thematic_layer: { ref: "S1" },
+    //   type: "raster",
+    //   style: { colormap: "reds", legend: true, opacity: 0.7 },
+    // },
   ],
 };
 
