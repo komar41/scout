@@ -1,26 +1,32 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
-import { Handle, Position, NodeResizer } from "@xyflow/react";
+import { Handle, Position, NodeResizer, useReactFlow } from "@xyflow/react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "./RenderNode.css";
+import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
 
-export type RenderNodeData = {
+export type ViewportNodeData = {
   /** optional initial center/zoom if you want to override later */
   center?: [number, number];
   zoom?: number;
+  onClose?: (id: string) => void;
+  onRun?: (id: string) => void;
+
+  // Have to add that physical layer data here optional
+  // and view spec also optional
 };
 
-export type RenderNode = Node<RenderNodeData, "renderNode">;
+export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
 
-const RenderNode = memo(function RenderNode({
+const ViewportNode = memo(function ViewportNode({
   id,
   data,
   selected,
-}: NodeProps<RenderNode>) {
+}: NodeProps<ViewportNode>) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<L.Map | null>(null);
+  const rf = useReactFlow();
 
   useEffect(() => {
     if (!mapRef.current || leafletRef.current) return;
@@ -77,25 +83,37 @@ const RenderNode = memo(function RenderNode({
     return () => observer.disconnect();
   }, []);
 
+  const onClose = useCallback(() => {
+    if (data?.onClose) return data.onClose(id);
+    rf.setNodes((nds) => nds.filter((n) => n.id !== id));
+  }, [data, id, rf]);
+
+  const onRun = useCallback(() => {
+    if (data?.onRun) return data.onRun(id);
+    console.log(data);
+    leafletRef.current?.invalidateSize();
+    console.log(`[ViewportNode] re-run map refresh`, id);
+  }, [data, id]);
+
   return (
-    <div className="rnode">
+    <div className="vpnode">
       <NodeResizer isVisible={!!selected} />
 
-      <div className="rnode__header">
-        <div className="rnode__title">Render</div>
+      <div className="vpnode__header">
+        <div className="vpnode__title">Viewport</div>
         <button
           type="button"
-          className="rnode__iconBtn rnode__iconBtn--close"
-          //   onClick={onClose}
+          className="vpnode__iconBtn vpnode__iconBtn--close"
+          onClick={onClose}
         >
           ✕
         </button>
       </div>
 
-      <div className="rnode__body">
+      <div className="vpnode__body">
         <div
           ref={mapRef}
-          className="rnode__map nodrag nowheel"
+          className="vpnode__map nodrag nowheel"
           aria-label={`Leaflet map for ${id}`}
           onPointerDown={(e) => e.stopPropagation()} // ⬅️ block node drag start
           onMouseDown={(e) => e.stopPropagation()}
@@ -103,15 +121,15 @@ const RenderNode = memo(function RenderNode({
         />
       </div>
 
-      <div className="rnode__footer">
+      <div className="vpnode__footer">
         <button
           type="button"
-          //   onClick={onRun}
+          onClick={onRun}
           title="Re-run"
           aria-label="Re-run"
-          className="rnode__actionBtn"
+          className="vpnode__actionBtn"
         >
-          <img src={restartPng} alt="Re-run" className="rnode__actionIcon" />
+          <img src={restartPng} alt="Re-run" className="vpnode__actionIcon" />
         </button>
       </div>
 
@@ -119,15 +137,15 @@ const RenderNode = memo(function RenderNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="rnode__handle rnode__handle--left"
+        className="vpnode__handle vpnode__handle--left"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="rnode__handle rnode__handle--right"
+        className="vpnode__handle vpnode__handle--right"
       />
     </div>
   );
 });
 
-export default RenderNode;
+export default ViewportNode;

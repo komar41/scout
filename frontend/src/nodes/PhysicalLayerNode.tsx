@@ -3,7 +3,7 @@ import type { NodeProps, Node } from "@xyflow/react";
 import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/physical_layer.json";
 
-import fetchPng from "../assets/fetch.png"; // your icon
+import fetchPng from "../assets/fetch.png";
 import "./PhysicalLayerNode.css";
 
 export type PhysicalLayerNode = Node<BaseNodeData, "physicalLayerNode">;

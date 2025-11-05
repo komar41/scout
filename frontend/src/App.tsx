@@ -19,7 +19,7 @@ import type { BaseNodeData } from "./nodes/BaseGrammarNode";
 import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
 import { ViewNodeData } from "./nodes/ViewNode";
-import type { RenderNodeData } from "./nodes/RenderNode";
+import type { ViewportNodeData } from "./nodes/ViewportNode";
 
 export default function App() {
   return (
@@ -32,11 +32,12 @@ export default function App() {
 function Canvas() {
   const idCounter = useRef(1);
   const [nodes, setNodes, onNodesChange] = useNodesState<
-    Node<BaseNodeData | RenderNodeData>
+    Node<BaseNodeData | ViewportNodeData>
   >([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getNode, getEdges } = useReactFlow();
 
+  // See if we can move this to BaseGrammarNode instead?
   const onCloseNode = useCallback(
     (nodeId: string) => {
       const n = getNode(nodeId);
@@ -90,6 +91,7 @@ function Canvas() {
     [getNode, getEdges, setNodes, setEdges]
   );
 
+  // Then remove the oncloseNode from createGrammarNode calls and declarations
   const addNode = useCallback(
     (tpl: TemplateKey) => {
       const nextId = `grammar-${idCounter.current++}`;
@@ -98,9 +100,9 @@ function Canvas() {
     [setNodes, onCloseNode]
   );
 
-  const addRender = useCallback(() => {
-    const nextId = `render-${idCounter.current++}`;
-    createRenderNode({ id: nextId, setNodes });
+  const addViewport = useCallback(() => {
+    const nextId = `viewport-${idCounter.current++}`;
+    createViewportNode({ id: nextId, setNodes });
   }, [setNodes]);
 
   // --- allow only physicalLayerNode -> viewNode
@@ -110,11 +112,17 @@ function Canvas() {
       const src = getNode(conn.source);
       const trg = getNode(conn.target);
       if (!src || !trg) return false;
-      return src.type === "physicalLayerNode" && trg.type === "viewNode";
+      const physToView =
+        src.type === "physicalLayerNode" && trg.type === "viewNode";
+      const viewToViewport =
+        src.type === "viewNode" && trg.type === "viewportNode";
+
+      return physToView || viewToViewport;
     },
     [getNode]
   );
 
+  // onConnect is fine. Should be there.. Here we handle connections and onConnections between nodes
   const onConnect = useCallback(
     (conn: Connection) => {
       if (!allow(conn)) return;
@@ -125,43 +133,70 @@ function Canvas() {
       const trg = getNode(conn.target!);
       if (!src || !trg) return;
 
-      // read physical_layer JSON from the source node
-      const val = (src.data as BaseNodeData).value as any;
-      const pl = val?.physical_layer;
-      if (!pl) return;
+      if (src.type === "physicalLayerNode" && trg.type === "viewNode") {
+        const val = (src.data as BaseNodeData).value as any;
+        const pl = val?.physical_layer;
 
-      // build the descriptor we store on the view node
-      const descriptor = {
-        id: pl.id as string,
-        datafile: pl.datafile as string,
-        region_of_interest: pl.region_of_interest as {
-          type: "bbox" | "geojson";
-          value: number[] | string;
-        },
-        layers: (pl.layers ?? []) as { tag: string; features: string[] }[],
-      };
+        // Need to add check if there is a physical layer in the view array of the view node and if its "ref" matches the id of the physical layer node
+        // Otherwise error message and do not add
+        // More error handling as we go like layer tag check if matches, feature check if exists, etc...
 
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id !== trg.id || n.type !== "viewNode") return n;
+        if (!pl) return;
 
-          const existing = (n.data as ViewNodeData).physical_layers ?? [];
-          const already = existing.some((e) => e.id === descriptor.id);
+        // build the descriptor we store on the view node
+        const descriptor = {
+          id: pl.id as string,
+          datafile: pl.datafile as string,
+          region_of_interest: pl.region_of_interest as {
+            type: "bbox" | "geojson";
+            value: number[] | string;
+          },
+          layers: (pl.layers ?? []) as { tag: string; features: string[] }[],
+        };
 
-          // append if new; replace if same id (optional behavior shown)
-          const nextPhysicalLayers = already
-            ? existing.map((e) => (e.id === descriptor.id ? descriptor : e))
-            : [...existing, descriptor];
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== trg.id || n.type !== "viewNode") return n;
 
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              physical_layers: nextPhysicalLayers,
-            } as ViewNodeData,
-          };
-        })
-      );
+            const existing = (n.data as ViewNodeData).physical_layers ?? [];
+            const already = existing.some((e) => e.id === descriptor.id);
+
+            // append if new; replace if same id (optional behavior shown)
+            const nextPhysicalLayers = already
+              ? existing.map((e) => (e.id === descriptor.id ? descriptor : e))
+              : [...existing, descriptor];
+
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                physical_layers: nextPhysicalLayers,
+              } as ViewNodeData,
+            };
+          })
+        );
+      } else if (src.type === "viewNode" && trg.type === "viewportNode") {
+        const srcData = (src.data as ViewNodeData).value as any;
+        // src data has physical_layers or should have. Before connection check if the view is connected to that physical layer its referencing.
+        // More error checking as we go along
+
+        // Have to find the physical layer and pass it as well to the viewport node alongside with view
+
+        const viewSpec = srcData?.view;
+        if (!viewSpec) return;
+
+        // push the CURRENT (possibly edited) spec on connect
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== trg.id) return n;
+            return {
+              ...n,
+              data: { ...n.data, view: viewSpec },
+            };
+          })
+        );
+        return;
+      }
     },
     [allow, getNode, setEdges, setNodes]
   );
@@ -181,7 +216,7 @@ function Canvas() {
       >
         <Background />
         <Controls position="bottom-right" />
-        <Toolbar onAdd={addNode} onAddRender={addRender} />
+        <Toolbar onAdd={addNode} onAddViewport={addViewport} />
       </ReactFlow>
     </div>
   );
@@ -189,10 +224,10 @@ function Canvas() {
 
 function Toolbar({
   onAdd,
-  onAddRender,
+  onAddViewport,
 }: {
   onAdd: (tpl: TemplateKey) => void;
-  onAddRender: () => void;
+  onAddViewport: () => void;
 }) {
   const { screenToFlowPosition } = useReactFlow();
   const [open, setOpen] = useState(false);
@@ -213,10 +248,10 @@ function Toolbar({
     [getDropPosition, onAdd]
   );
 
-  const handleAddRender = useCallback(() => {
+  const handleAddViewport = useCallback(() => {
     (window as any)._desiredGrammarPos = getDropPosition();
-    onAddRender();
-  }, [getDropPosition, onAddRender]);
+    onAddViewport();
+  }, [getDropPosition, onAddViewport]);
 
   return (
     <div className="toolbar">
@@ -248,8 +283,8 @@ function Toolbar({
         )}
       </div>
 
-      <button onClick={handleAddRender} className="toolbar__btn">
-        ➕ Render
+      <button onClick={handleAddViewport} className="toolbar__btn">
+        ➕ Viewport
       </button>
     </div>
   );
@@ -269,7 +304,7 @@ function createGrammarNode({
 }: {
   id: string;
   setNodes: React.Dispatch<
-    React.SetStateAction<Node<BaseNodeData | RenderNodeData>[]>
+    React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
   >;
   template: TemplateKey;
   onCloseNode: (nodeId: string) => void;
@@ -305,22 +340,22 @@ function createGrammarNode({
   setNodes((nds) => nds.concat(newNode));
 }
 
-function createRenderNode({
+function createViewportNode({
   id,
   setNodes,
   data,
 }: {
   id: string;
   setNodes: React.Dispatch<
-    React.SetStateAction<Node<BaseNodeData | RenderNodeData>[]>
+    React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
   >;
   data?: { center?: [number, number]; zoom?: number };
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
 
-  const newNode: Node<RenderNodeData> = {
+  const newNode: Node<ViewportNodeData> = {
     id,
-    type: "renderNode",
+    type: "viewportNode",
     position: pos,
     width: 400,
     height: 400,
