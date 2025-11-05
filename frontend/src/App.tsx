@@ -37,6 +37,73 @@ function Canvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getNode, getEdges } = useReactFlow();
 
+  const pushPhysicalToViews = useCallback(
+    (srcId: string, trgId?: string) => {
+      const src = getNode(srcId);
+      if (!src || src.type !== "physicalLayerNode") return;
+
+      const val: any = (src.data as BaseNodeData).value;
+      const pl = val?.physical_layer;
+      if (!pl) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id) || n.type !== "viewNode") return n;
+
+          const existing = (n.data as ViewNodeData).physical_layers ?? [];
+          const already = existing.some((e) => e.id === pl.id);
+          const nextPhysicalLayers = already
+            ? existing.map((e) => (e.id === pl.id ? pl : e))
+            : [...existing, pl];
+
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              physical_layers: nextPhysicalLayers,
+            } as ViewNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
+  const pushViewToViewports = useCallback(
+    (srcId: string, trgId?: string) => {
+      const src = getNode(srcId);
+      if (!src || src.type !== "viewNode") return;
+
+      const value: any = (src.data as BaseNodeData).value;
+      const viewSpec = value?.view;
+      const physical_layers = (src.data as ViewNodeData).physical_layers;
+      if (!Array.isArray(viewSpec)) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id)) return n;
+          if (n.type !== "renderNode" && n.type !== "viewportNode") return n;
+          return { ...n, data: { ...n.data, view: viewSpec, physical_layers } };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
   // See if we can move this to BaseGrammarNode instead?
   const onCloseNode = useCallback(
     (nodeId: string) => {
@@ -95,9 +162,17 @@ function Canvas() {
   const addNode = useCallback(
     (tpl: TemplateKey) => {
       const nextId = `grammar-${idCounter.current++}`;
-      createGrammarNode({ id: nextId, setNodes, template: tpl, onCloseNode });
+      createGrammarNode({
+        id: nextId,
+        setNodes,
+        template: tpl,
+        onCloseNode,
+        getNode, // ✅ pass getNode
+        onRunPhysical: pushPhysicalToViews, // ✅ pass helper
+        onRunView: pushViewToViewports, // ✅ pass helper
+      });
     },
-    [setNodes, onCloseNode]
+    [setNodes, onCloseNode, getNode, pushPhysicalToViews, pushViewToViewports]
   );
 
   const addViewport = useCallback(() => {
@@ -129,76 +204,25 @@ function Canvas() {
 
       setEdges((eds) => addEdge({ ...conn, animated: true }, eds));
 
+      const srcId = conn.source!;
       const src = getNode(conn.source!);
       const trg = getNode(conn.target!);
+      const trgId = conn.target!;
       if (!src || !trg) return;
 
       if (src.type === "physicalLayerNode" && trg.type === "viewNode") {
-        const val = (src.data as BaseNodeData).value as any;
-        const pl = val?.physical_layer;
+        // push (with validation) immediately on connect
+        pushPhysicalToViews(srcId, trgId);
+        return;
+      }
 
-        // Need to add check if there is a physical layer in the view array of the view node and if its "ref" matches the id of the physical layer node
-        // Otherwise error message and do not add
-        // More error handling as we go like layer tag check if matches, feature check if exists, etc...
-
-        if (!pl) return;
-
-        // build the descriptor we store on the view node
-        const descriptor = {
-          id: pl.id as string,
-          datafile: pl.datafile as string,
-          region_of_interest: pl.region_of_interest as {
-            type: "bbox" | "geojson";
-            value: number[] | string;
-          },
-          layers: (pl.layers ?? []) as { tag: string; features: string[] }[],
-        };
-
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.id !== trg.id || n.type !== "viewNode") return n;
-
-            const existing = (n.data as ViewNodeData).physical_layers ?? [];
-            const already = existing.some((e) => e.id === descriptor.id);
-
-            // append if new; replace if same id (optional behavior shown)
-            const nextPhysicalLayers = already
-              ? existing.map((e) => (e.id === descriptor.id ? descriptor : e))
-              : [...existing, descriptor];
-
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                physical_layers: nextPhysicalLayers,
-              } as ViewNodeData,
-            };
-          })
-        );
-      } else if (src.type === "viewNode" && trg.type === "viewportNode") {
-        const srcData = (src.data as ViewNodeData).value as any;
-        // src data has physical_layers or should have. Before connection check if the view is connected to that physical layer its referencing.
-        // More error checking as we go along
-
-        // Have to find the physical layer and pass it as well to the viewport node alongside with view
-
-        const viewSpec = srcData?.view;
-        if (!viewSpec) return;
-
-        // push the CURRENT (possibly edited) spec on connect
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.id !== trg.id) return n;
-            return {
-              ...n,
-              data: { ...n.data, view: viewSpec },
-            };
-          })
-        );
+      if (src.type === "viewNode" && trg.type === "viewportNode") {
+        // push current edited view spec immediately on connect
+        pushViewToViewports(srcId, trgId);
         return;
       }
     },
-    [allow, getNode, setEdges, setNodes]
+    [allow, getNode, setEdges, pushPhysicalToViews, pushViewToViewports]
   );
 
   return (
@@ -301,6 +325,9 @@ function createGrammarNode({
   setNodes,
   template,
   onCloseNode,
+  getNode,
+  onRunPhysical,
+  onRunView,
 }: {
   id: string;
   setNodes: React.Dispatch<
@@ -308,6 +335,9 @@ function createGrammarNode({
   >;
   template: TemplateKey;
   onCloseNode: (nodeId: string) => void;
+  getNode: (id: string) => Node | undefined; // ✅
+  onRunPhysical: (srcId: string) => void; // ✅
+  onRunView: (srcId: string) => void; // ✅
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -329,10 +359,19 @@ function createGrammarNode({
       onClose: (nodeId) => onCloseNode(nodeId),
       onRun: (nodeId) => {
         setNodes((nds) => {
-          const node = nds.find((n) => n.id === nodeId);
-          if (node) console.log(node);
+          // no state change here; use it just to get node type id
           return nds;
         });
+        const node = getNode(nodeId); // from outer scope Canvas()
+        if (!node) return;
+        if (node.type === "physicalLayerNode") {
+          onRunPhysical(nodeId);
+          console.log(node.data);
+        } else if (node.type === "viewNode") {
+          console.log("Running view node", nodeId);
+          onRunView(nodeId);
+          console.log(node.data, "***");
+        }
       },
     },
   };

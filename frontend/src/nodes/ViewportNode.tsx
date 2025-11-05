@@ -12,9 +12,36 @@ export type ViewportNodeData = {
   zoom?: number;
   onClose?: (id: string) => void;
   onRun?: (id: string) => void;
-
   // Have to add that physical layer data here optional
   // and view spec also optional
+  physical_layers?: {
+    id: string;
+    datafile: string;
+    region_of_interest: {
+      type: "bbox" | "geojson";
+      value: number[] | string; // bbox or geojson filename
+    };
+    layers: {
+      tag: string;
+      features: string[];
+    }[];
+  }[];
+  view?: {
+    physical_layer?: {
+      ref: string;
+    };
+    thematic_layer?: {
+      ref: string;
+    };
+    type: string;
+    projection?: string;
+    zoom_pan?: boolean;
+    layers?: {
+      tag: string;
+      style: Record<string, any>;
+    }[];
+    style?: Record<string, any>;
+  }[];
 };
 
 export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
