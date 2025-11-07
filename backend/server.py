@@ -5,6 +5,8 @@ import os, sys, signal, shutil
 from pathlib import Path
 import geopandas as gpd
 from shapely.geometry import Polygon
+from flask import send_from_directory, abort
+
 
 app = Flask(__name__)
 CORS(app)
@@ -84,6 +86,17 @@ def select_features(gdf: gpd.GeoDataFrame, features: list[str]) -> gpd.GeoDataFr
     cols = existing + (["geometry"] if "geometry" in gdf.columns else [])
     
     return gdf[cols]
+
+@app.get("/generated/<path:filename>")
+def serve_generated(filename: str):
+    # Only allow .geojson files from OUT_DIR
+    if not filename.lower().endswith(".geojson"):
+        abort(404)
+    return send_from_directory(
+        OUT_DIR, filename,
+        mimetype="application/geo+json",  # fine if omitted; browsers still parse
+        conditional=True                  # enables ETag/If-None-Match
+    )
 
 @app.post('/api/ingest-physical-layer')
 def ingest_physical_layer():

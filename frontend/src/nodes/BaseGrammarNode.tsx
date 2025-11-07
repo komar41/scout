@@ -16,12 +16,9 @@ export type BaseNodeData = {
   onClose?: (id: string) => void;
   onRun?: (id: string) => void;
 
-  /** Pass the schema for the INNER value (e.g., object under "physical_layer" or array under "view") */
   schema?: object;
-  /** Extract the inner value to validate (defaults to value itself) */
   pickInner?: (v: GrammarValue) => unknown;
 
-  /** Optional extra footer actions (buttons, etc.) */
   footerActions?: React.ReactNode;
   onFetch?: (id: string) => void;
 };

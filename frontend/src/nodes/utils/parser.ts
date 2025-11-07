@@ -1,0 +1,37 @@
+import { ParsedView } from "./types";
+
+export function parseView(raw: any): ParsedView[] {
+  if (!raw?.view || !Array.isArray(raw.view)) return [];
+
+  return raw.view.map((v: any) => {
+    const base: ParsedView = {
+      physicalLayerRef: v.physical_layer?.ref,
+      thematicLayerRef: v.thematic_layer?.ref,
+      type: v.type,
+      projection: v.projection,
+      zoom_pan: v.zoom_pan,
+      layers: [],
+    };
+
+    if (Array.isArray(v.layers)) {
+      base.layers = v.layers.map((lyr: any) => {
+        const style = lyr.style || {};
+        return {
+          tag: lyr.tag,
+          fill: style.fill
+            ? {
+                attribute: style.fill.attribute || style.fill.feature,
+                colormap: style.fill.colormap || "viridis",
+              }
+            : undefined,
+          stroke: style.stroke_color
+            ? { color: style.stroke_color, width: style.stroke_width || 1.2 }
+            : undefined,
+          opacity: style.opacity ?? 0.7,
+        };
+      });
+    }
+
+    return base;
+  });
+}

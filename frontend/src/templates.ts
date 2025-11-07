@@ -1,8 +1,7 @@
-export type TemplateKey = "physical_layer" | "view";
+export type TemplateKey = "physical_layer" | "view" | "interaction";
 // | "choice"
 // | "join"
 // | "transformation"
-// | "interaction";
 
 export const physicalLayerTemplate = {
   physical_layer: {
@@ -54,7 +53,16 @@ export const viewTemplate = {
 export const choiceTemplate = { choice: {} };
 export const joinTemplate = { join: {} };
 export const transformationTemplate = { transformation: {} };
-export const interactionTemplate = { interaction: {} };
+export const interactionTemplate = {
+  interaction: {
+    physicalLayerRef: "baselayer-0",
+    type: "click",
+    action: "remove",
+    layer: {
+      tag: "buildings",
+    },
+  },
+};
 
 export const TEMPLATES: Record<TemplateKey, any> = {
   physical_layer: physicalLayerTemplate,
@@ -62,7 +70,7 @@ export const TEMPLATES: Record<TemplateKey, any> = {
   // choice: choiceTemplate,
   // join: joinTemplate,
   // transformation: transformationTemplate,
-  // interaction: interactionTemplate,
+  interaction: interactionTemplate,
 };
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
@@ -71,5 +79,5 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   // choice: "choice",
   // join: "join",
   // transformation: "transformation",
-  // interaction: "interaction",
+  interaction: "interaction",
 };

@@ -116,12 +116,14 @@
 .vpnode__handle--left {
   top: 55% !important;
   left: 6px !important;
+  background: #5c6bc0 !important;
   transform: translateY(-50%) !important;
 }
 
 .vpnode__handle--right {
   top: 55% !important;
   right: 6px !important;
+  background: #ff7043 !important;
   transform: translateY(-50%) !important;
 }
 
@@ -138,3 +140,7 @@
 }
 
 /* Highlight the render node when selected */
+.vpnode__handle--bottom {
+  bottom: 55px;
+  background: #5c6bc0 !important;
+}

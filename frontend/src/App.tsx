@@ -21,6 +21,9 @@ import "./App.css";
 import { ViewNodeData } from "./nodes/ViewNode";
 import type { ViewportNodeData } from "./nodes/ViewportNode";
 
+import { InteractionNodeData } from "./nodes/InteractionNode";
+import type { InteractionNode } from "./nodes/InteractionNode";
+
 export default function App() {
   return (
     <ReactFlowProvider>
@@ -39,6 +42,7 @@ function Canvas() {
 
   const pushPhysicalToViews = useCallback(
     (srcId: string, trgId?: string) => {
+      console.log("Pushing physical layer to views", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "physicalLayerNode") return;
 
@@ -78,6 +82,7 @@ function Canvas() {
 
   const pushViewToViewports = useCallback(
     (srcId: string, trgId?: string) => {
+      console.log("Pushing view to viewports", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "viewNode") return;
 
@@ -96,7 +101,9 @@ function Canvas() {
       setNodes((nds) =>
         nds.map((n) => {
           if (!targetIds.includes(n.id)) return n;
-          if (n.type !== "renderNode" && n.type !== "viewportNode") return n;
+
+          if (n.type !== "viewportNode") return n;
+          console.log("Updating viewport node", n.id);
           return { ...n, data: { ...n.data, view: viewSpec, physical_layers } };
         })
       );
@@ -167,9 +174,9 @@ function Canvas() {
         setNodes,
         template: tpl,
         onCloseNode,
-        getNode, // ✅ pass getNode
-        onRunPhysical: pushPhysicalToViews, // ✅ pass helper
-        onRunView: pushViewToViewports, // ✅ pass helper
+        getNode,
+        onRunPhysical: pushPhysicalToViews,
+        onRunView: pushViewToViewports,
       });
     },
     [setNodes, onCloseNode, getNode, pushPhysicalToViews, pushViewToViewports]
@@ -191,8 +198,10 @@ function Canvas() {
         src.type === "physicalLayerNode" && trg.type === "viewNode";
       const viewToViewport =
         src.type === "viewNode" && trg.type === "viewportNode";
+      const interactionToViewport =
+        src.type === "interactionNode" && trg.type === "viewportNode";
 
-      return physToView || viewToViewport;
+      return physToView || viewToViewport || interactionToViewport;
     },
     [getNode]
   );
@@ -318,6 +327,7 @@ function Toolbar({
 const kindToType: Record<TemplateKey, keyof typeof nodeTypes> = {
   physical_layer: "physicalLayerNode",
   view: "viewNode",
+  interaction: "interactionNode",
 };
 
 function createGrammarNode({
@@ -335,9 +345,9 @@ function createGrammarNode({
   >;
   template: TemplateKey;
   onCloseNode: (nodeId: string) => void;
-  getNode: (id: string) => Node | undefined; // ✅
-  onRunPhysical: (srcId: string) => void; // ✅
-  onRunView: (srcId: string) => void; // ✅
+  getNode: (id: string) => Node | undefined;
+  onRunPhysical: (srcId: string) => void;
+  onRunView: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -370,7 +380,6 @@ function createGrammarNode({
         } else if (node.type === "viewNode") {
           console.log("Running view node", nodeId);
           onRunView(nodeId);
-          console.log(node.data, "***");
         }
       },
     },

@@ -153,8 +153,10 @@
 .gnode__handle--left {
   top: 50% !important;
   transform: translateY(-50%) !important;
+  background: #5c6bc0 !important;
 }
 .gnode__handle--right {
   top: 50% !important;
   transform: translateY(-50%) !important;
+  background: #ff7043 !important;
 }

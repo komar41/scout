@@ -1,22 +1,41 @@
 import { BaseNodeData } from "./BaseGrammarNode";
+
 import PhysicalLayerNode, {
   PhysicalLayerNode as PhysicalLayerNodeType,
 } from "./PhysicalLayerNode";
+
 import ViewNode, { ViewNode as ViewNodeType, ViewNodeData } from "./ViewNode";
-import ViewportNode from "./ViewportNode";
 
-// add more as you implement them:
-// import JoinNode from "./JoinNode"; etc.
+import ViewportNode, {
+  ViewportNode as ViewportNodeType,
+  ViewportNodeData,
+} from "./ViewportNode";
 
+import InteractionNode, {
+  InteractionNode as InteractionNodeType,
+  InteractionNodeData,
+} from "./InteractionNode";
+
+// register all implemented node types
 export const nodeTypes = {
   physicalLayerNode: PhysicalLayerNode,
   viewNode: ViewNode,
   viewportNode: ViewportNode,
-  //   joinNode: JoinNode,
-  //   transformationNode: TransformationNode,
-  //   interactionNode: InteractionNode,
-  //   choiceNode: ChoiceNode,
+  interactionNode: InteractionNode,
+  // joinNode: JoinNode,
+  // transformationNode: TransformationNode,
+  // choiceNode: ChoiceNode,
 } as const;
 
-export type AnyNode = PhysicalLayerNodeType | ViewNodeType;
-export type AnyNodeData = BaseNodeData | ViewNodeData; // extend as you add nodes
+// union helpers (extend as you add more)
+export type AnyNode =
+  | PhysicalLayerNodeType
+  | ViewNodeType
+  | ViewportNodeType
+  | InteractionNodeType;
+
+export type AnyNodeData =
+  | BaseNodeData
+  | ViewNodeData
+  | ViewportNodeData
+  | InteractionNodeData;
