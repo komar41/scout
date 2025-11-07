@@ -145,7 +145,7 @@
 
 /* Connectors (handles) */
 .gnode__handle {
-  background: #6b7280 !important;
+  background: #5c6bc0 !important;
   border: 2px solid #fff !important;
   width: 10px !important;
   height: 10px !important;
@@ -153,10 +153,19 @@
 .gnode__handle--left {
   top: 50% !important;
   transform: translateY(-50%) !important;
+  transform: translateX(30%) !important;
   background: #5c6bc0 !important;
 }
 .gnode__handle--right {
   top: 50% !important;
   transform: translateY(-50%) !important;
+  transform: translateX(-30%) !important;
   background: #ff7043 !important;
+}
+
+.interactionnode__handle {
+  background: #5c6bc0 !important;
+  border: 2px solid #fff !important;
+  width: 10px !important;
+  height: 10px !important;
 }

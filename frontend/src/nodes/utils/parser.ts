@@ -27,7 +27,14 @@ export function parseView(raw: any): ParsedView[] {
           stroke: style.stroke_color
             ? { color: style.stroke_color, width: style.stroke_width || 1.2 }
             : undefined,
-          opacity: style.opacity ?? 0.7,
+          opacity: style.opacity ?? 1,
+
+          zIndex:
+            style.zIndex ??
+            style["z-index"] ??
+            style.z_index ??
+            lyr.zIndex ??
+            0,
         };
       });
     }

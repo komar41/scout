@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { Handle, Position, NodeResizer, useReactFlow } from "@xyflow/react";
+import { NodeResizer, useReactFlow } from "@xyflow/react";
 import type { NodeProps, Node } from "@xyflow/react";
 import Ajv, { ErrorObject } from "ajv";
 import addFormats from "ajv-formats";
@@ -163,18 +163,6 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
         {data.footerActions}
       </div>
-
-      {/* CONNECTORS */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="gnode__handle gnode__handle--left"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="gnode__handle gnode__handle--right"
-      />
     </div>
   );
 });

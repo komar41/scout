@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
 import L from "leaflet";
@@ -6,11 +6,9 @@ import "leaflet/dist/leaflet.css";
 import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
 import * as d3 from "d3";
-import { PhysicalLayerDef, ViewDef, ParsedView } from "./utils/types";
+import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
 import { parseView } from "./utils/parser";
-import { getPropertyRangeFromGeoJSON, pickInterpolator } from "./utils/helper";
-import { applyGeometryInteractions } from "./utils/geomInteractions";
-import type { InteractionSpec } from "./utils/geomInteractions";
+import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
 
 export type ViewportNodeData = {
   center?: [number, number];
@@ -19,6 +17,7 @@ export type ViewportNodeData = {
   onRun?: (id: string) => void;
   physical_layers?: PhysicalLayerDef[];
   view?: ViewDef[];
+  interactions?: InteractionDef[];
 };
 
 export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
@@ -95,136 +94,21 @@ const ViewportNode = memo(function ViewportNode({
         return;
       }
 
-      // parse only first view for now
       const parsed = parseView({ view: nodeData.view });
-      const view = parsed[0];
-      if (!view) return;
 
-      const plId = view.physicalLayerRef;
-      if (!plId) return; // (thematic layer TODO)
-
-      // simplest: clear previous drawings (you can optimize later with per-tag diff)
-      clearAllSvgLayers();
-
-      let unionBounds: L.LatLngBounds | null = null;
-      const path = makeLeafletPath(map);
-
-      for (const lyr of view.layers ?? []) {
-        const tag = lyr.tag;
-        const url = `http://127.0.0.1:5000/generated/${plId}_${tag}.geojson`;
-
-        let fc: any;
-        try {
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          fc = await res.json();
-        } catch (err) {
-          console.error(`[Viewport ${id}] Failed to fetch ${url}`, err);
-          continue;
-        }
-
-        // color scale (optional)
-        const attr = lyr.fill?.attribute;
-        const interp = pickInterpolator(lyr.fill?.colormap);
-        const ext = getPropertyRangeFromGeoJSON(fc, attr);
-        const colorScale =
-          attr && interp
-            ? d3.scaleSequential(interp).domain(ext ?? [0, 1])
-            : null;
-
-        const strokeColor = lyr.stroke?.color ?? "#222";
-        const strokeWidth = lyr.stroke?.width ?? 1;
-        const fillOpacity = lyr.opacity ?? 0.7;
-        const fallbackFill = "#6aa9ff";
-
-        const gTag = getOrCreateTagGroup(tag);
-
-        // key by common ids if present
-        const keyFn = (d: any, i: number) =>
-          d.id ?? d.properties?.id ?? d.properties?.osm_id ?? i;
-
-        const sel = gTag
-          .selectAll<SVGPathElement, any>("path.geom")
-          .data(fc.features, keyFn);
-
-        sel.exit().remove();
-
-        const enter = sel.enter().append("path").attr("class", "geom");
-
-        const geomSel = enter
-          .merge(sel as any)
-          .attr("d", path as any)
-          .style("fill", (d: any) => {
-            const v = attr ? Number(d?.properties?.[attr]) : undefined;
-            return attr && colorScale && Number.isFinite(v)
-              ? colorScale(v!)
-              : fallbackFill;
-          })
-          .style("fill-opacity", fillOpacity)
-          .style("stroke", strokeColor)
-          .style("stroke-width", strokeWidth)
-          .style("vector-effect", "non-scaling-stroke")
-          .style("pointer-events", "all");
-
-        // Decide interactions based on tag
-        const interactions: InteractionSpec[] =
-          tag === "buildings"
-            ? [
-                {
-                  interaction: "hover-highlight",
-                  action: "highlight+show",
-                  tooltipAccessor: (d: any) => {
-                    // Prefer whatever attribute is configured, fallback to "height"
-                    const key = attr || "height";
-                    const raw = d?.properties?.[key];
-
-                    const val = Number(raw);
-                    if (Number.isFinite(val)) {
-                      return `Height: ${val.toFixed(1)} m`;
-                    }
-
-                    // fallback label if no numeric height
-                    return `Building${raw != null ? ` (height: ${raw})` : ""}`;
-                  },
-                },
-                {
-                  interaction: "click",
-                  action: "remove",
-                },
-              ]
-            : [
-                {
-                  interaction: "hover-highlight",
-                  action: "highlight",
-                },
-              ];
-
-        applyGeometryInteractions(
-          geomSel,
-          interactions,
-          {
-            tag,
-            onRemoveFeature: (feature, tagName) => {
-              console.log(
-                `[Viewport ${id}] remove feature via helper`,
-                tagName,
-                feature
-              );
-            },
-          },
-          strokeWidth
-        );
-
-        // compute bounds quickly using Leaflet's helper
-        const tmp = L.geoJSON(fc);
-        const b = tmp.getBounds();
-        if (b.isValid()) unionBounds = unionBounds ? unionBounds.extend(b) : b;
-        tmp.remove();
+      if (!parsed || !parsed.length) {
+        clearAllSvgLayers();
+        return;
       }
 
-      if (unionBounds && unionBounds.isValid()) {
-        map.fitBounds(unionBounds, { padding: [12, 12] });
-      }
+      await renderPhysicalLayersForViews({
+        id,
+        map,
+        parsedViews: parsed,
+        clearAllSvgLayers,
+        makeLeafletPath,
+        getOrCreateTagGroup,
+      });
 
       map.invalidateSize();
       // paths will auto-reproject because we listen for map move/zoom in init
@@ -267,7 +151,7 @@ const ViewportNode = memo(function ViewportNode({
 
     // reproject on pan/zoom
     const onMove = () => redrawAll();
-    map.on("zoom viewreset move", onMove);
+    map.on("zoom viewreset moveend", onMove);
 
     return () => {
       try {
@@ -326,7 +210,7 @@ const ViewportNode = memo(function ViewportNode({
     if (data?.onRun) return data.onRun(id);
     // manual refresh if needed
     loadFromView(data);
-  }, [data, loadFromView]);
+  }, [data, loadFromView, id]);
 
   return (
     <div className="vpnode">

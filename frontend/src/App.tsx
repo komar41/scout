@@ -21,9 +21,6 @@ import "./App.css";
 import { ViewNodeData } from "./nodes/ViewNode";
 import type { ViewportNodeData } from "./nodes/ViewportNode";
 
-import { InteractionNodeData } from "./nodes/InteractionNode";
-import type { InteractionNode } from "./nodes/InteractionNode";
-
 export default function App() {
   return (
     <ReactFlowProvider>
@@ -111,60 +108,6 @@ function Canvas() {
     [getNode, getEdges, setNodes]
   );
 
-  // See if we can move this to BaseGrammarNode instead?
-  const onCloseNode = useCallback(
-    (nodeId: string) => {
-      const n = getNode(nodeId);
-      if (!n) return;
-
-      const curEdges = getEdges(); // live edges
-
-      if (n.type === "physicalLayerNode") {
-        // read the physical layer id from the closing node
-        const pl = (n.data as BaseNodeData)?.value as any;
-        const plId: string | undefined = pl?.physical_layer?.id;
-
-        // all targets currently connected from this physical node
-        const targetIds = curEdges
-          .filter((e) => e.source === nodeId)
-          .map((e) => e.target);
-
-        // 1) update connected view nodes: remove the matching physical layer
-        setNodes((nds) =>
-          nds
-            .map((nn) => {
-              if (nn.type !== "viewNode" || !targetIds.includes(nn.id))
-                return nn;
-
-              const data = nn.data as ViewNodeData;
-              const existing = data.physical_layers ?? [];
-
-              // filter out the descriptor coming from this physical node
-              const next = plId
-                ? existing.filter((d) => d.id !== plId)
-                : existing;
-
-              return {
-                ...nn,
-                data: {
-                  ...nn.data,
-                  physical_layers: next.length ? next : undefined,
-                } as ViewNodeData,
-              };
-            })
-            // 2) finally remove the physical node itself
-            .filter((nn) => nn.id !== nodeId)
-        );
-
-        // 3) remove all edges touching the closed node
-        setEdges((eds) =>
-          eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
-        );
-      }
-    },
-    [getNode, getEdges, setNodes, setEdges]
-  );
-
   // Then remove the oncloseNode from createGrammarNode calls and declarations
   const addNode = useCallback(
     (tpl: TemplateKey) => {
@@ -173,13 +116,12 @@ function Canvas() {
         id: nextId,
         setNodes,
         template: tpl,
-        onCloseNode,
         getNode,
         onRunPhysical: pushPhysicalToViews,
         onRunView: pushViewToViewports,
       });
     },
-    [setNodes, onCloseNode, getNode, pushPhysicalToViews, pushViewToViewports]
+    [setNodes, getNode, pushPhysicalToViews, pushViewToViewports]
   );
 
   const addViewport = useCallback(() => {
@@ -334,7 +276,6 @@ function createGrammarNode({
   id,
   setNodes,
   template,
-  onCloseNode,
   getNode,
   onRunPhysical,
   onRunView,
@@ -344,7 +285,6 @@ function createGrammarNode({
     React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
   >;
   template: TemplateKey;
-  onCloseNode: (nodeId: string) => void;
   getNode: (id: string) => Node | undefined;
   onRunPhysical: (srcId: string) => void;
   onRunView: (srcId: string) => void;
@@ -366,19 +306,13 @@ function createGrammarNode({
           )
         );
       },
-      onClose: (nodeId) => onCloseNode(nodeId),
+      // Each node type decides how to "run" itself
       onRun: (nodeId) => {
-        setNodes((nds) => {
-          // no state change here; use it just to get node type id
-          return nds;
-        });
-        const node = getNode(nodeId); // from outer scope Canvas()
+        const node = getNode(nodeId);
         if (!node) return;
         if (node.type === "physicalLayerNode") {
           onRunPhysical(nodeId);
-          console.log(node.data);
         } else if (node.type === "viewNode") {
-          console.log("Running view node", nodeId);
           onRunView(nodeId);
         }
       },

@@ -1,10 +1,12 @@
 import { memo, useCallback } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, Handle, Position } from "@xyflow/react";
 import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/view.json";
 import { PhysicalLayerDef } from "./utils/types";
 import type { ViewportNodeData } from "./ViewportNode";
+
+import "./BaseGrammarNode.css";
 
 export type ViewNodeData = BaseNodeData & {
   physical_layers?: PhysicalLayerDef[];
@@ -60,17 +62,33 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
   );
 
   return (
-    <BaseGrammarNode
-      id={id}
-      selected={selected}
-      data={{
-        ...data,
-        title: "Grammar • view",
-        schema,
-        pickInner: (v) => (v as any)?.view,
-        onClose: onCloseViewNode, // 👈 pass the handler here
-      }}
-    />
+    <>
+      <BaseGrammarNode
+        id={id}
+        selected={selected}
+        data={{
+          ...data,
+          title: "Grammar • view",
+          schema,
+          pickInner: (v) => (v as any)?.view,
+          onClose: onCloseViewNode, // 👈 pass the handler here
+        }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="view-in"
+        className="gnode__handle gnode__handle--left"
+      />
+
+      {/* Source: to ViewportNode */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="view-out"
+        className="gnode__handle gnode__handle--right"
+      />
+    </>
   );
 });
 
