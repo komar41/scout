@@ -16,6 +16,9 @@ export const physicalLayerTemplate = {
         tag: "buildings",
         features: ["height"],
       },
+      {
+        tag: "roads",
+      },
     ],
   },
 };
@@ -34,12 +37,13 @@ export const viewTemplate = {
             fill: { feature: "height", colormap: "greys" },
             stroke_color: "#333333",
             opacity: 0.8,
+            "z-index": 1,
           },
         },
-        // {
-        //   tag: "roads",
-        //   style: { stroke_color: "#444444", width: 1.2 },
-        // },
+        {
+          tag: "roads",
+          style: { "z-index": 2, stroke_color: "#444444" },
+        },
       ],
     },
     // {
@@ -55,6 +59,7 @@ export const joinTemplate = { join: {} };
 export const transformationTemplate = { transformation: {} };
 export const interactionTemplate = {
   interaction: {
+    id: "interaction-0",
     physicalLayerRef: "baselayer-0",
     type: "click",
     action: "remove",

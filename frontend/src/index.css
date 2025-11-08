@@ -11,3 +11,12 @@ body {
   width: 100vw;
   height: 100vh;
 }
+
+.react-flow__edges {
+  z-index: 1;
+  pointer-events: none; /* so edges don’t block node clicks */
+}
+
+.react-flow__nodes {
+  z-index: 0;
+}

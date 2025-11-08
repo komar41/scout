@@ -7,8 +7,12 @@
       "description": "Click → remove feature(s) from a given physical layer + tag.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "action", "physicalLayerRef", "layer"],
+      "required": ["id", "type", "action", "physicalLayerRef", "layer"],
       "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
         "type": {
           "type": "string",
           "enum": ["click"]
@@ -35,8 +39,12 @@
       "description": "Click → modify a specific feature/attribute on a given tag.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "action", "physicalLayerRef", "layer"],
+      "required": ["id", "type", "action", "physicalLayerRef", "layer"],
       "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
         "type": {
           "type": "string",
           "enum": ["click"]
@@ -68,8 +76,12 @@
       "description": "Hover → highlight geometries for a given tag.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "action", "physicalLayerRef", "layer"],
+      "required": ["id", "type", "action", "physicalLayerRef", "layer"],
       "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
         "type": {
           "type": "string",
           "enum": ["hover"]
@@ -96,8 +108,13 @@
       "description": "Hover → highlight + show text (e.g., from a feature) for a given tag.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "action", "physicalLayerRef", "layer"],
+      "required": ["id", "type", "action", "physicalLayerRef", "layer"],
+
       "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
         "type": {
           "type": "string",
           "enum": ["hover"]

@@ -31,3 +31,23 @@ export type ParsedView = {
   zoom_pan?: boolean;
   layers: ParsedLayer[];
 };
+
+export type InteractionDef = {
+  id: string;
+
+  // "click" or "hover"
+  type: string;
+
+  // - "remove"
+  // - "modify_feature"
+  // - "highlight"
+  // - "highlight+show"
+  action: string;
+
+  physicalLayerRef: string;
+
+  layer: {
+    tag: string;
+    feature?: string;
+  };
+};
