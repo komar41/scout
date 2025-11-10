@@ -2,245 +2,92 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>D3 over Leaflet — Click to Remove (Height Colors)</title>
+    <title>Buildings Tiles Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
     />
     <style>
       html,
-      body,
-      #map {
-        height: 100%;
+      body {
         margin: 0;
-        background-color: #fff;
+        padding: 0;
+        height: 100%;
       }
-
-      .leaflet-tile-pane {
-        filter: brightness(10);
-      }
-      .geom {
-        /* base styles; fill will be set per-feature via JS */
-        fill-opacity: 0.75;
-        stroke: #222;
-        stroke-width: 0.8;
-        vector-effect: non-scaling-stroke;
-        fill-rule: evenodd;
-        cursor: pointer;
-        pointer-events: all;
-      }
-      #toolbar {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1000;
-        background: #fff;
-        padding: 6px 8px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font: 13px system-ui, sans-serif;
-        display: flex;
-        gap: 6px;
-      }
-      button {
-        padding: 4px 8px;
+      #map {
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
+
   <body>
     <div id="map"></div>
-    <div id="toolbar">
-      <button id="undoBtn">Undo</button>
-      <button id="resetBtn">Reset</button>
-      <span id="stats">removed: 0</span>
-    </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
     <script>
-      const FILE_BUILDINGS = "./data/chi_downtown_buildings.geojson";
-      const FILE_EDGES = "./data/chi_downtown_edges.geojson";
+      // Bounds from your GeoJSON
+      const minLon = -87.6477143;
+      const minLat = 41.8722748;
+      const maxLon = -87.6186789;
+      const maxLat = 41.8955858;
 
-      const removed = new Set();
-      const stack = []; // for undo
-      const stats = document.getElementById("stats");
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLon = (minLon + maxLon) / 2;
 
-      // color scale for buildings (domain will be set after load)
-      let colorScale = d3.scaleSequential(d3.interpolateBlues).domain([0, 500]);
+      const z = 16;
+      const tileSize = 256; // ✅ matches your PNGs
 
-      function toHeight(d) {
-        const h = d?.properties?.height;
-        const n = typeof h === "string" ? Number(h) : h;
-        return Number.isFinite(n) ? n : null;
-      }
-      function fillFor(d) {
-        const h = toHeight(d);
-        return h != null ? colorScale(h) : "#ccc";
-      }
+      const map = L.map("map", {
+        center: [centerLat, centerLon],
+        zoom: z,
+      });
 
-      // 1) Map + tiles (hidden)
-      const map = L.map("map").setView([41.881, -87.63], 14);
-      L.tileLayer(
-        "https://cartodb-basemaps-a.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",
+      // Base OSM layer (keep visible for sanity check)
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+        opacity: 0.6,
+      }).addTo(map);
+
+      // Transparent tile for missing custom tiles
+      const emptyTile = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+
+      // Custom buildings tiles
+      const buildingsLayer = L.tileLayer(
+        // path is relative to backend/index.html → backend/data/...
+        "data/served/baselayer-0_buildings_raster/{z}_{x}_{y}.png",
         {
-          maxZoom: 20,
-          opacity: 0,
-          attribution: "&copy; OpenStreetMap contributors",
+          tileSize: tileSize,
+          minZoom: z,
+          maxZoom: z,
+          noWrap: true,
+          opacity: 1,
+          zIndex: 1000,
+          errorTileUrl: emptyTile,
         }
       ).addTo(map);
 
-      // Ensure overlay pane is above tiles and interactive
-      map.getPanes().overlayPane.style.zIndex = 200;
-      map.getPanes().overlayPane.style.pointerEvents = "auto";
-
-      // 2) SVG renderer + D3 root + layers (edges under buildings)
-      const svgRenderer = L.svg().addTo(map);
-      const overlaySvg = d3
-        .select(svgRenderer._container)
-        .style("pointer-events", "auto");
-
-      const gRoot = overlaySvg.append("g").attr("class", "d3-layer");
-      const gEdges = gRoot.append("g").attr("class", "edges-layer"); // under
-      const gBldgs = gRoot.append("g").attr("class", "buildings-layer"); // over
-
-      // 3) D3 path with Leaflet projection
-      const project = d3.geoTransform({
-        point: function (lon, lat) {
-          const p = map.latLngToLayerPoint([lat, lon]);
-          this.stream.point(p.x, p.y);
-        },
+      // Log which tiles work / fail
+      buildingsLayer.on("tileload", (e) => {
+        console.log("✅ Loaded:", e.coords, e.tile.src);
       });
-      const path = d3.geoPath(project);
 
-      function updateStats() {
-        stats.textContent = `removed: ${stack.length}`;
-      }
+      buildingsLayer.on("tileerror", (e) => {
+        console.warn("❌ Failed:", e.coords, "→", e.tile.src);
+      });
 
-      // --- BUILDINGS ---
-      function redrawBuildings(features) {
-        const visible = features.filter(
-          (f) => !removed.has(f.properties?.osm_id)
-        );
-        const sel = gBldgs
-          .selectAll("path.geom")
-          .data(visible, (d) => d.properties?.osm_id ?? d.id);
-
-        sel.join(
-          (enter) =>
-            enter
-              .append("path")
-              .attr("class", "geom")
-              .attr("d", path)
-              .attr("fill", fillFor)
-              .style("pointer-events", "all")
-              .on("mousedown", (ev) => ev.stopPropagation())
-              .on("click", (ev, d) => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                const id = d.properties?.osm_id ?? d.id;
-                if (id == null || removed.has(id)) return;
-                removed.add(id);
-                stack.push(id);
-                redrawBuildings(features);
-                updateStats();
-              }),
-          (update) => update.attr("d", path).attr("fill", fillFor),
-          (exit) => exit.remove()
-        );
-      }
-
-      // --- EDGES (streets; static, no interactions) ---
-      function drawEdges(features) {
-        const sel = gEdges
-          .selectAll("path.edge")
-          .data(features, (d) => d.properties?.osm_id ?? d.id ?? d);
-
-        sel.join(
-          (enter) =>
-            enter
-              .append("path")
-              .attr("class", "edge")
-              .attr("d", path)
-              .attr("fill", "none")
-              .attr("stroke", "#756bb1") // distinct street color
-              .attr("stroke-width", 1.6)
-              .attr("stroke-opacity", 0.9)
-              .style("pointer-events", "none"), // let map/buildings receive clicks
-          (update) => update.attr("d", path),
-          (exit) => exit.remove()
-        );
-      }
-
-      function reproject() {
-        // update both layers on view changes
-        gEdges.selectAll("path.edge").attr("d", path);
-        gBldgs.selectAll("path.geom").attr("d", path).attr("fill", fillFor);
-      }
-
-      // Keep in sync with camera
-      map.on("zoomend moveend viewreset", reproject);
-
-      // Undo/Reset (only affects buildings)
-      document.getElementById("undoBtn").onclick = () => {
-        const id = stack.pop();
-        if (id == null) return;
-        removed.delete(id);
-        updateStats();
-        reproject();
-      };
-      document.getElementById("resetBtn").onclick = () => {
-        removed.clear();
-        stack.length = 0;
-        updateStats();
-        reproject();
-      };
-
-      // Load edges first (no fit)
-      fetch(FILE_EDGES)
-        .then((r) => r.json())
-        .then((fc) => {
-          drawEdges(fc.features ?? []);
-        })
-        .catch((err) => console.error("Failed to load edges:", err));
-
-      // Load buildings, fit, set colors, then draw
-      fetch(FILE_BUILDINGS)
-        .then((r) => r.json())
-        .then((fc) => {
-          // Fit bounds using Leaflet
-          const tmp = L.geoJSON(fc);
-          const b = tmp.getBounds();
-          tmp.remove();
-          if (b.isValid()) map.fitBounds(b.pad(0.05));
-
-          // derive color domain from data heights (ignore null)
-          const heights = (fc.features ?? [])
-            .map(toHeight)
-            .filter((h) => h != null);
-          if (heights.length) {
-            const [minH, maxH] = d3.extent(heights);
-            const lo = Math.max(0, Math.floor(minH));
-            const hi = Math.ceil(maxH);
-            colorScale = d3
-              .scaleSequential(d3.interpolateRgb("#eee", "#000"))
-              .domain([lo, hi])
-              .clamp(true);
-          }
-
-          redrawBuildings(fc.features ?? []);
-          updateStats();
-        })
-        .catch((err) => {
-          console.error(err);
-          alert(
-            "Failed to load " +
-              FILE_BUILDINGS +
-              " — serve via http(s) and check path."
-          );
-        });
+      // Focus on your AOI
+      map.fitBounds([
+        [minLat, minLon],
+        [maxLat, maxLon],
+      ]);
     </script>
   </body>
 </html>
-<!-- get the zoom center on change. as we want to sync multiple maps -->
-<!-- on click should give lat lngs-->
