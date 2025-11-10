@@ -51,3 +51,14 @@ export type InteractionDef = {
     feature?: string;
   };
 };
+
+export type ParsedInteraction = {
+  id: string;
+  type: string;
+  action: string;
+  physicalLayerRef: string;
+  layer: {
+    tag: string;
+    feature?: string;
+  };
+};

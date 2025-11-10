@@ -1,4 +1,5 @@
 import { ParsedView } from "./types";
+import type { InteractionDef } from "./types";
 
 export function parseView(raw: any): ParsedView[] {
   if (!raw?.view || !Array.isArray(raw.view)) return [];
@@ -41,4 +42,38 @@ export function parseView(raw: any): ParsedView[] {
 
     return base;
   });
+}
+
+export function parseInteraction(raw: any): InteractionDef[] {
+  // console.log(raw, "<<< raw interaction");
+  if (!raw?.interaction || !Array.isArray(raw.interaction)) return [];
+
+  return raw.interaction
+    .map((it: any): InteractionDef | null => {
+      if (!it) return null;
+
+      const layer = it.layer ?? {};
+
+      const def: InteractionDef = {
+        id: String(it.id ?? ""),
+        type: String(it.type ?? ""),
+        action: String(it.action ?? ""),
+        physicalLayerRef: String(it.physicalLayerRef ?? ""),
+        layer: {
+          tag: String(layer.tag ?? ""),
+          ...(layer.feature != null ? { feature: String(layer.feature) } : {}),
+        },
+      };
+
+      return def;
+    })
+    .filter(
+      (d): d is InteractionDef =>
+        !!d &&
+        !!d.id &&
+        !!d.type &&
+        !!d.action &&
+        !!d.physicalLayerRef &&
+        !!d.layer?.tag
+    );
 }

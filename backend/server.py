@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, sys, signal, shutil
@@ -145,6 +146,23 @@ def ingest_physical_layer():
         "status": "success" if not problems else "partial",
         "problems": problems
     }), 200 if not problems else 207  
+
+@app.route("/api/update-physical-layer", methods=["POST"])
+def update_physical_layer():
+    data = request.get_json()
+    print(data)
+    pl_id = data["physicalLayerRef"]
+    tag = data["tag"]
+    geojson = data["geojson"]
+
+    filename = f"{pl_id}_{tag}.geojson"
+    filepath = OUT_DIR / filename
+
+    with open(filepath, "w") as f:
+        json.dump(geojson, f)
+
+    return jsonify({"status": "success"}), 200
+
 
 if __name__ == '__main__':
     # remove old served before starting

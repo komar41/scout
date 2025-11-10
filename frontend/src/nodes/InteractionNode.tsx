@@ -39,7 +39,7 @@ const InteractionNode = memo(function InteractionNode(
       setNodes((nds) =>
         nds
           .map((nn) => {
-            if (nn.type !== "viewPortNode" || !targetIds.includes(nn.id)) {
+            if (nn.type !== "viewportNode" || !targetIds.includes(nn.id)) {
               return nn;
             }
 
@@ -47,7 +47,7 @@ const InteractionNode = memo(function InteractionNode(
             const existing = vpData.interactions ?? [];
 
             const next = iId ? existing.filter((d) => d.id !== iId) : existing;
-
+            // console.log(next, "____");
             return {
               ...nn,
               data: {
@@ -78,6 +78,7 @@ const InteractionNode = memo(function InteractionNode(
           title: "Grammar • interaction",
           schema,
           pickInner: (v) => (v as any)?.interaction,
+          onClose: onCloseInteractionNode,
           // no custom onClose; BaseGrammarNode default remove is fine
         }}
       />

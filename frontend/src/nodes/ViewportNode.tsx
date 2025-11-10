@@ -1,13 +1,14 @@
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
-import L from "leaflet";
+import L, { geoJson } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
+import persistPng from "../assets/fetch.png";
 import * as d3 from "d3";
 import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
-import { parseView } from "./utils/parser";
+import { parseInteraction, parseView } from "./utils/parser";
 import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
 
 export type ViewportNodeData = {
@@ -30,6 +31,9 @@ const ViewportNode = memo(function ViewportNode({
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
+  const pendingRef = useRef<Record<string, any>>({});
+  const wasDraggedRef = useRef(false);
+
   // ---- D3 / SVG overlay refs ----
   const svgLayerRef = useRef<L.SVG | null>(null);
   const overlaySvgRef = useRef<d3.Selection<
@@ -49,6 +53,45 @@ const ViewportNode = memo(function ViewportNode({
   >(new Map());
 
   const rf = useReactFlow();
+
+  const shouldHandleClick = useCallback(() => {
+    if (wasDraggedRef.current) {
+      // A drag/zoom happened since last stable state → ignore this click
+      wasDraggedRef.current = false;
+      return false;
+    }
+    // No drag since last time → treat as a real click
+    return true;
+  }, []);
+
+  const onPersist = useCallback(() => {
+    const entries = Object.values(pendingRef.current) as {
+      plId: string;
+      tag: string;
+      geojson: any;
+    }[];
+
+    if (!entries.length) return;
+
+    console.log(entries, "<<< persisting edits");
+
+    entries.forEach(({ plId, tag, geojson }) => {
+      fetch("http://127.0.0.1:5000/api/update-physical-layer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          physicalLayerRef: plId,
+          tag,
+          geojson,
+        }),
+      }).catch(() => {
+        // optional: handle error if you want feedback
+      });
+    });
+
+    // clear pending once sent
+    pendingRef.current = {};
+  }, []);
 
   // Leaflet-aware D3 path generator
   const makeLeafletPath = useCallback((map: L.Map) => {
@@ -95,6 +138,9 @@ const ViewportNode = memo(function ViewportNode({
       }
 
       const parsed = parseView({ view: nodeData.view });
+      const parsedInteractions = parseInteraction({
+        interaction: nodeData.interactions,
+      });
 
       if (!parsed || !parsed.length) {
         clearAllSvgLayers();
@@ -105,15 +151,31 @@ const ViewportNode = memo(function ViewportNode({
         id,
         map,
         parsedViews: parsed,
+        parsedInteractions: parsedInteractions,
         clearAllSvgLayers,
         makeLeafletPath,
         getOrCreateTagGroup,
+        onDirty: ({ plId, tag, featureCollection }) => {
+          const key = `${plId}::${tag}`;
+          pendingRef.current[key] = {
+            plId,
+            tag,
+            geojson: featureCollection,
+          };
+        },
+        shouldHandleClick,
       });
 
       map.invalidateSize();
       // paths will auto-reproject because we listen for map move/zoom in init
     },
-    [clearAllSvgLayers, getOrCreateTagGroup, id, makeLeafletPath]
+    [
+      clearAllSvgLayers,
+      getOrCreateTagGroup,
+      id,
+      makeLeafletPath,
+      shouldHandleClick,
+    ]
   );
 
   // Init Leaflet + SVG overlay once
@@ -150,12 +212,32 @@ const ViewportNode = memo(function ViewportNode({
     gRootRef.current = gRoot;
 
     // reproject on pan/zoom
+
+    const onMoveStart = () => {
+      wasDraggedRef.current = true;
+    };
+    const onMoveEnd = () => {
+      // Do NOT reset here.
+      // We want the next click to see that a drag happened.
+    };
+
+    map.on("movestart", onMoveStart);
+    map.on("moveend", onMoveEnd);
+    map.on("zoomstart", onMoveStart);
+    map.on("zoomend", onMoveEnd);
+
     const onMove = () => redrawAll();
     map.on("zoom viewreset moveend", onMove);
+
+    leafletRef.current = map;
 
     return () => {
       try {
         map.off("zoom viewreset move", onMove);
+        map.off("movestart", onMoveStart);
+        map.off("moveend", onMoveEnd);
+        map.off("zoomstart", onMoveStart);
+        map.off("zoomend", onMoveEnd);
         clearAllSvgLayers();
         // remove the appended root
         gRootRef.current?.remove();
@@ -209,6 +291,7 @@ const ViewportNode = memo(function ViewportNode({
   const onRun = useCallback(() => {
     if (data?.onRun) return data.onRun(id);
     // manual refresh if needed
+    // console.log(data);
     loadFromView(data);
   }, [data, loadFromView, id]);
 
@@ -247,6 +330,19 @@ const ViewportNode = memo(function ViewportNode({
           className="vpnode__actionBtn"
         >
           <img src={restartPng} alt="Re-run" className="vpnode__actionIcon" />
+        </button>
+        <button
+          type="button"
+          onClick={onPersist}
+          title="Save edits"
+          aria-label="Save edits"
+          className="vpnode__actionBtn"
+        >
+          <img
+            src={persistPng}
+            alt="Save edits"
+            className="vpnode__actionIcon"
+          />
         </button>
       </div>
 

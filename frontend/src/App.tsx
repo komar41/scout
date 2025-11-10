@@ -77,6 +77,46 @@ function Canvas() {
     [getNode, getEdges, setNodes]
   );
 
+  const pushInteractionToViewport = useCallback(
+    (srcId: string, trgId?: string) => {
+      console.log("Pushing interactions to viewport", srcId, trgId);
+      const src = getNode(srcId);
+      if (!src || src.type !== "interactionNode") return;
+
+      const val: any = (src.data as BaseNodeData).value;
+      const i = val?.interaction;
+      if (!i) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id) || n.type !== "viewportNode") return n;
+
+          const existing = (n.data as ViewportNodeData).interactions ?? [];
+          const already = existing.some((e) => e.id === i.id);
+          const nextInteractions = already
+            ? existing.map((e) => (e.id === i.id ? i : e))
+            : [...existing, i];
+
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              interactions: nextInteractions,
+            } as ViewportNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
   const pushViewToViewports = useCallback(
     (srcId: string, trgId?: string) => {
       console.log("Pushing view to viewports", srcId, trgId);
@@ -119,9 +159,16 @@ function Canvas() {
         getNode,
         onRunPhysical: pushPhysicalToViews,
         onRunView: pushViewToViewports,
+        onRunInteraction: pushInteractionToViewport,
       });
     },
-    [setNodes, getNode, pushPhysicalToViews, pushViewToViewports]
+    [
+      setNodes,
+      getNode,
+      pushPhysicalToViews,
+      pushViewToViewports,
+      pushInteractionToViewport,
+    ]
   );
 
   const addViewport = useCallback(() => {
@@ -162,18 +209,28 @@ function Canvas() {
       if (!src || !trg) return;
 
       if (src.type === "physicalLayerNode" && trg.type === "viewNode") {
-        // push (with validation) immediately on connect
         pushPhysicalToViews(srcId, trgId);
         return;
       }
 
       if (src.type === "viewNode" && trg.type === "viewportNode") {
-        // push current edited view spec immediately on connect
         pushViewToViewports(srcId, trgId);
         return;
       }
+
+      if (src.type === "interactionNode" && trg.type === "viewportNode") {
+        pushInteractionToViewport(srcId, trgId);
+        return;
+      }
     },
-    [allow, getNode, setEdges, pushPhysicalToViews, pushViewToViewports]
+    [
+      allow,
+      getNode,
+      setEdges,
+      pushPhysicalToViews,
+      pushViewToViewports,
+      pushInteractionToViewport,
+    ]
   );
 
   return (
@@ -279,6 +336,7 @@ function createGrammarNode({
   getNode,
   onRunPhysical,
   onRunView,
+  onRunInteraction,
 }: {
   id: string;
   setNodes: React.Dispatch<
@@ -288,6 +346,7 @@ function createGrammarNode({
   getNode: (id: string) => Node | undefined;
   onRunPhysical: (srcId: string) => void;
   onRunView: (srcId: string) => void;
+  onRunInteraction: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -314,6 +373,8 @@ function createGrammarNode({
           onRunPhysical(nodeId);
         } else if (node.type === "viewNode") {
           onRunView(nodeId);
+        } else if (node.type === "interactionNode") {
+          onRunInteraction(nodeId);
         }
       },
     },

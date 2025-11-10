@@ -4,43 +4,121 @@ import L from "leaflet";
 import { getPropertyRangeFromGeoJSON, pickInterpolator } from "./helper";
 import { applyGeometryInteractions } from "./geomInteractions";
 import type { InteractionSpec } from "./geomInteractions";
-import type { ParsedView } from "./types";
+import type { ParsedView, ParsedInteraction } from "./types";
+
+type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
+
+/**
+ * Map ParsedInteraction -> InteractionSpec for a given layer.
+ */
+function buildInteractionSpecsForLayer(opts: {
+  interactions: ParsedInteraction[];
+  plId: string;
+  tag: string;
+  attr?: string;
+}): InteractionSpec[] {
+  const { interactions, plId, tag, attr } = opts;
+  const relevant = interactions.filter(
+    (i) => i.physicalLayerRef === plId && i.layer.tag === tag
+  );
+
+  const specs: InteractionSpec[] = [];
+
+  for (const i of relevant) {
+    // HOVER
+    if (i.type === "hover") {
+      if (i.action === "highlight") {
+        specs.push({
+          interaction: "hover-highlight",
+          action: "highlight",
+        });
+        continue;
+      }
+
+      if (i.action === "highlight+show") {
+        const featureKey = i.feature || attr || "height";
+
+        specs.push({
+          interaction: "hover-highlight",
+          action: "highlight+show",
+          tooltipAccessor: (d: any) => {
+            const raw = d?.properties?.[featureKey];
+            const num = Number(raw);
+
+            if (Number.isFinite(num)) {
+              return `${featureKey}: ${num.toFixed(2)}`;
+            }
+            if (raw != null) {
+              return `${featureKey}: ${raw}`;
+            }
+            return tag;
+          },
+        });
+        continue;
+      }
+    }
+
+    // CLICK
+    if (i.type === "click") {
+      if (i.action === "remove") {
+        specs.push({
+          interaction: "click",
+          action: "remove",
+        });
+        continue;
+      }
+
+      if (i.action === "modify_feature") {
+        // You can extend InteractionSpec later to carry feature info / UI config.
+        specs.push({
+          interaction: "click",
+          action: "modify_feature",
+        } as any);
+        continue;
+      }
+    }
+  }
+
+  return specs;
+}
 
 /**
  * Render all physical-layer views into the Leaflet+D3 overlay.
- * - Handles multiple ParsedView entries.
- * - Only processes views with `physicalLayerRef` (thematic views are skipped for now).
- * - Respects z-index from `layer.style.zIndex` or `layer.zIndex`.
  */
 export async function renderPhysicalLayersForViews(opts: {
   id: string;
   map: L.Map;
   parsedViews: ParsedView[];
+  parsedInteractions: ParsedInteraction[];
   clearAllSvgLayers: () => void;
   makeLeafletPath: (map: L.Map) => d3.GeoPath<any, d3.GeoPermissibleObjects>;
-  getOrCreateTagGroup: (
-    tag: string
-  ) => d3.Selection<SVGGElement, unknown, null, undefined>;
+  getOrCreateTagGroup: (tag: string) => TagGroup;
+  onDirty?: (args: {
+    plId: string;
+    tag: string;
+    featureCollection: any;
+  }) => void;
+  shouldHandleClick: () => boolean;
 }) {
   const {
     id,
     map,
     parsedViews,
+    parsedInteractions,
     clearAllSvgLayers,
     makeLeafletPath,
     getOrCreateTagGroup,
+    onDirty,
+    shouldHandleClick,
   } = opts;
 
-  // Only keep views that reference a physical layer
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
 
   if (!physicalViews.length) {
-    // Only thematic or invalid views -> nothing for now (thematic handler TODO)
     clearAllSvgLayers();
     return;
   }
 
-  // For now: clear everything once, then redraw all physical views
   clearAllSvgLayers();
 
   let unionBounds: L.LatLngBounds | null = null;
@@ -48,15 +126,12 @@ export async function renderPhysicalLayersForViews(opts: {
 
   for (const view of physicalViews) {
     const plId = view.physicalLayerRef;
-    if (!plId) {
-      // thematic; will be handled by a different helper later
-      continue;
-    }
+    if (!plId) continue;
 
-    // Sort layers by z-index if present (style.zIndex or zIndex), default 0
+    // If you’ve already moved zIndex into ParsedLayer, just sort on a.zIndex / b.zIndex
     const layers = [...(view.layers ?? [])].sort((a: any, b: any) => {
-      const za = a.style?.zIndex ?? a.zIndex ?? 0;
-      const zb = b.style?.zIndex ?? b.zIndex ?? 0;
+      const za = (a as any).zIndex ?? 0;
+      const zb = (b as any).zIndex ?? 0;
       return za - zb;
     });
 
@@ -74,7 +149,7 @@ export async function renderPhysicalLayersForViews(opts: {
         continue;
       }
 
-      // --- Styling / color scale ---
+      // --- styling ---
       const attr = lyr.fill?.attribute;
       const interp = pickInterpolator(lyr.fill?.colormap);
       const ext = getPropertyRangeFromGeoJSON(fc, attr);
@@ -90,7 +165,6 @@ export async function renderPhysicalLayersForViews(opts: {
 
       const gTag = getOrCreateTagGroup(tag);
 
-      // key by stable ids if present
       const keyFn = (d: any, i: number) =>
         d.id ?? d.properties?.id ?? d.properties?.osm_id ?? i;
 
@@ -117,44 +191,35 @@ export async function renderPhysicalLayersForViews(opts: {
         .style("vector-effect", "non-scaling-stroke")
         .style("pointer-events", "all");
 
-      // --- Interactions ---
-      const interactions: InteractionSpec[] =
-        tag === "buildings"
-          ? [
-              {
-                interaction: "hover-highlight",
-                action: "highlight+show",
-                tooltipAccessor: (d: any) => {
-                  const key = attr || "height";
-                  const raw = d?.properties?.[key];
-                  const val = Number(raw);
-                  if (Number.isFinite(val)) {
-                    return `Height: ${val.toFixed(1)} m`;
-                  }
-                  return `Building${raw != null ? ` (height: ${raw})` : ""}`;
-                },
-              },
-              { interaction: "click", action: "remove" },
-            ]
-          : [{ interaction: "hover-highlight", action: "highlight" }];
-
-      applyGeometryInteractions(
-        geomSel,
-        interactions,
-        {
-          tag,
-          onRemoveFeature: (feature, tagName) => {
-            console.log(
-              `[Viewport ${id}] remove feature via helper`,
-              tagName,
-              feature
-            );
+      // --- interactions from parsedInteractions ---
+      const interactions = buildInteractionSpecsForLayer({
+        interactions: parsedInteractions,
+        plId,
+        tag,
+        attr,
+      });
+      if (interactions.length) {
+        applyGeometryInteractions(
+          geomSel,
+          interactions,
+          {
+            tag,
+            featureCollection: fc,
+            shouldHandleClick,
+            onCollectionChange: ({ tag: changedTag, featureCollection }) => {
+              if (!onDirty) return;
+              onDirty({
+                plId,
+                tag: changedTag,
+                featureCollection,
+              });
+            },
           },
-        },
-        strokeWidth
-      );
+          strokeWidth
+        );
+      }
 
-      // --- Bounds update ---
+      // --- bounds ---
       const tmp = L.geoJSON(fc);
       const b = tmp.getBounds();
       if (b.isValid()) {

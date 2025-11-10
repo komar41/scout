@@ -24,15 +24,11 @@ export interface InteractionSpec {
 }
 
 export interface InteractionContext {
-  tag?: string;
+  tag: string;
+  featureCollection?: any;
 
-  onRemoveFeature?: (d: GeometryDatum, tag?: string) => void;
-  onModifyFeature?: (
-    d: GeometryDatum,
-    updates: Record<string, unknown>,
-    tag?: string
-  ) => void;
-
+  onCollectionChange?: (args: { tag: string; featureCollection: any }) => void;
+  shouldHandleClick?: () => boolean;
   showTooltip?: (
     content: string,
     evt: MouseEvent,
@@ -42,7 +38,6 @@ export interface InteractionContext {
   hideTooltip?: () => void;
 }
 
-/** Internal: lazy global tooltip div for instant hover display */
 function getDefaultTooltipEl(): HTMLDivElement {
   let el = document.querySelector<HTMLDivElement>(".geom-tooltip");
   if (!el) {
@@ -85,9 +80,10 @@ function defaultHideTooltip() {
 export function applyGeometryInteractions(
   sel: Selection<SVGPathElement, GeometryDatum, any, any>,
   specs: InteractionSpec[] | undefined,
-  ctx: InteractionContext,
+  ctx: InteractionContext & { featureCollection?: any },
   baseStrokeWidth: number
 ) {
+  console.log(sel, specs, ctx, baseStrokeWidth);
   if (!specs || specs.length === 0) {
     specs = [{ interaction: "hover-highlight", action: "highlight" }];
   }
@@ -102,13 +98,14 @@ export function applyGeometryInteractions(
   for (const spec of specs) {
     const { interaction, action } = spec;
 
-    // HOVER-HIGHLIGHT (+ optional show)
+    // ───────────────────── HOVER-HIGHLIGHT (+ optional show) ─────────────────────
     if (interaction === "hover-highlight") {
       const wantsShow = action === "highlight+show";
 
       sel
         .on("mouseover.hover-highlight", function (event, d) {
           d3.select(this).style("stroke-width", baseStrokeWidth + 1.5);
+          d3.select(this).style("cursor", "pointer");
 
           if (!wantsShow) return;
 
@@ -120,14 +117,15 @@ export function applyGeometryInteractions(
           if (ctx.showTooltip) {
             ctx.showTooltip(content, event as MouseEvent, d, ctx.tag);
           } else {
-            // instant custom tooltip (no native <title> delay)
             defaultShowTooltip(content, event as MouseEvent);
           }
         })
         .on("mousemove.hover-highlight", function (event, d) {
-          if (action !== "highlight+show") return;
+          if (!wantsShow) return;
+
           const content =
             spec.tooltipAccessor?.(d) ?? ctx.tag ?? d?.properties?.id ?? "";
+
           if (!content) return;
 
           if (ctx.showTooltip) {
@@ -143,7 +141,7 @@ export function applyGeometryInteractions(
         });
     }
 
-    // HOVER-TOOLTIP ONLY (if you ever use it)
+    // ───────────────────────────── HOVER-TOOLTIP ONLY ────────────────────────────
     if (interaction === "hover-tooltip" && !action) {
       sel
         .on("mouseover.hover-tooltip", function (event, d) {
@@ -174,28 +172,57 @@ export function applyGeometryInteractions(
         });
     }
 
-    // CLICK + REMOVE
+    // ─────────────────────────────── CLICK + REMOVE ──────────────────────────────
     if (interaction === "click" && action === "remove") {
       sel.on("click.click-remove", function (_event, d) {
-        ctx.onRemoveFeature?.(d, ctx.tag);
+        if (ctx.shouldHandleClick && !ctx.shouldHandleClick()) {
+          return;
+        }
+        // remove SVG
         d3.select(this).remove();
+
+        // update in-memory GeoJSON if provided
+        const fc = ctx.featureCollection;
+        if (fc && Array.isArray(fc.features)) {
+          fc.features = fc.features.filter((f: any) => f !== d);
+
+          ctx.onCollectionChange?.({
+            tag: ctx.tag,
+            featureCollection: fc,
+          });
+        }
+
+        // user callback
       });
     }
 
-    // CLICK + USER_INPUT -> MODIFY_FEATURE
+    // ───────────── CLICK + USER_INPUT -> MODIFY_FEATURE (modify_feature) ─────────
     if (interaction === "click+user_input" && action === "modify_feature") {
       sel.on("click.click-modify", function (_event, d) {
+        if (ctx.shouldHandleClick && !ctx.shouldHandleClick()) {
+          return;
+        }
         const cfg = spec.modifyPrompt?.(d) ?? {
           prop: "value",
           message: "Enter new value:",
         };
+
         const input = window.prompt(cfg.message, "");
         if (input == null) return;
 
         const updates: Record<string, unknown> = { [cfg.prop]: input };
-        ctx.onModifyFeature?.(d, updates, ctx.tag);
 
-        if (d && d.properties) Object.assign(d.properties, updates);
+        if (d && d.properties) {
+          Object.assign(d.properties, updates);
+        }
+
+        const fc = ctx.featureCollection;
+        if (fc && Array.isArray(fc.features)) {
+          ctx.onCollectionChange?.({
+            tag: ctx.tag,
+            featureCollection: fc,
+          });
+        }
       });
     }
   }
