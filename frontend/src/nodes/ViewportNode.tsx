@@ -274,6 +274,7 @@ const ViewportNode = memo(function ViewportNode({
     const ctrl = new AbortController();
     (async () => {
       try {
+        console.log(data, "<<< loading viewport node data");
         await loadFromView(data);
       } catch (e: any) {
         if (e?.name !== "AbortError") console.error(e);

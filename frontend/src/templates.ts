@@ -6,6 +6,7 @@ export type TemplateKey = "physical_layer" | "view" | "interaction";
 export const physicalLayerTemplate = {
   physical_layer: {
     id: "baselayer-0",
+    type: "vector",
     datafile: "chicago",
     region_of_interest: {
       type: "bbox",
