@@ -96,15 +96,28 @@ def select_features(gdf: gpd.GeoDataFrame, features: list[str]) -> gpd.GeoDataFr
     
     return gdf[cols]
 
-@app.get("/generated/<path:filename>")
-def serve_generated(filename: str):
-    # Only allow .geojson files from OUT_DIR
+@app.get("/generated/raster/<path:filename>")
+def serve_raster(filename: str):
     if not filename.lower().endswith(".geojson"):
         abort(404)
+
     return send_from_directory(
-        OUT_DIR, filename,
-        mimetype="application/geo+json",  # fine if omitted; browsers still parse
-        conditional=True                  # enables ETag/If-None-Match
+        raster_subdir,
+        filename,
+        mimetype="application/geo+json",
+        conditional=True
+    )
+
+@app.get("/generated/vector/<path:filename>")
+def serve_vector(filename: str):
+    if not filename.lower().endswith(".geojson"):
+        abort(404)
+
+    return send_from_directory(
+        vector_subdir,
+        filename,
+        mimetype="application/geo+json",
+        conditional=True
     )
 
 @app.post('/api/ingest-physical-layer')
@@ -152,7 +165,7 @@ def ingest_physical_layer():
                         (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
                     )
                     node_ids = nodes.loc[mask].index
-                    G_crop = G.subgraph(node_ids)
+                    G_crop = G.subgraph(node_ids).copy()
 
                     with gzip.open("%s/vector/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
                         pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)

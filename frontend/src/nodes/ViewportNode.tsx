@@ -142,6 +142,8 @@ const ViewportNode = memo(function ViewportNode({
         interaction: nodeData.interactions,
       });
 
+      const physicalLayers = nodeData.physical_layers;
+
       if (!parsed || !parsed.length) {
         clearAllSvgLayers();
         return;
@@ -152,6 +154,7 @@ const ViewportNode = memo(function ViewportNode({
         map,
         parsedViews: parsed,
         parsedInteractions: parsedInteractions,
+        physicalLayers,
         clearAllSvgLayers,
         makeLeafletPath,
         getOrCreateTagGroup,
@@ -274,7 +277,6 @@ const ViewportNode = memo(function ViewportNode({
     const ctrl = new AbortController();
     (async () => {
       try {
-        console.log(data, "<<< loading viewport node data");
         await loadFromView(data);
       } catch (e: any) {
         if (e?.name !== "AbortError") console.error(e);

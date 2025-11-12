@@ -4,7 +4,6 @@ import type { InteractionDef } from "./types";
 export function parseView(raw: any): ParsedView[] {
   if (!raw?.view || !Array.isArray(raw.view)) return [];
 
-  console.log(raw, "<<< raw view");
   return raw.view.map((v: any) => {
     const base: ParsedView = {
       physicalLayerRef: v.physical_layer?.ref,

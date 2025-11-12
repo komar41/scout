@@ -4,7 +4,7 @@ import L from "leaflet";
 import { getPropertyRangeFromGeoJSON, pickInterpolator } from "./helper";
 import { applyGeometryInteractions } from "./geomInteractions";
 import type { InteractionSpec } from "./geomInteractions";
-import type { ParsedView, ParsedInteraction } from "./types";
+import type { ParsedView, ParsedInteraction, PhysicalLayerDef } from "./types";
 
 type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
 
@@ -90,6 +90,7 @@ export async function renderPhysicalLayersForViews(opts: {
   map: L.Map;
   parsedViews: ParsedView[];
   parsedInteractions: ParsedInteraction[];
+  physicalLayers: PhysicalLayerDef[];
   clearAllSvgLayers: () => void;
   makeLeafletPath: (map: L.Map) => d3.GeoPath<any, d3.GeoPermissibleObjects>;
   getOrCreateTagGroup: (tag: string) => TagGroup;
@@ -105,6 +106,7 @@ export async function renderPhysicalLayersForViews(opts: {
     map,
     parsedViews,
     parsedInteractions,
+    physicalLayers,
     clearAllSvgLayers,
     makeLeafletPath,
     getOrCreateTagGroup,
@@ -126,7 +128,19 @@ export async function renderPhysicalLayersForViews(opts: {
 
   for (const view of physicalViews) {
     const plId = view.physicalLayerRef;
+
+    // If no id → invalid
     if (!plId) continue;
+
+    // Find matching physical layer
+    const pl = physicalLayers.find((p) => p.id === plId);
+
+    // Must exist AND must be vector
+    if (!pl || pl.type !== "vector" || view.type !== "vector") {
+      continue;
+    }
+
+    console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
 
     // If you’ve already moved zIndex into ParsedLayer, just sort on a.zIndex / b.zIndex
     const layers = [...(view.layers ?? [])].sort((a: any, b: any) => {
@@ -137,7 +151,7 @@ export async function renderPhysicalLayersForViews(opts: {
 
     for (const lyr of layers) {
       const tag = lyr.tag;
-      const url = `http://127.0.0.1:5000/generated/${plId}_${tag}.geojson`;
+      const url = `http://127.0.0.1:5000/generated/vector/${plId}_${tag}.geojson`;
 
       let fc: any;
       try {
