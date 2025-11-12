@@ -199,7 +199,6 @@ def convert_to_raster():
 
     return jsonify({"status": "success"}), 200
 
-
 if __name__ == '__main__':
     # remove old served before starting
     if OUT_DIR.exists():
