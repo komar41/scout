@@ -1,4 +1,6 @@
 from __future__ import annotations
+from copyreg import pickle
+import gzip
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -7,7 +9,9 @@ from pathlib import Path
 import geopandas as gpd
 from shapely.geometry import Polygon
 from flask import send_from_directory, abort
-
+from convert_to_raster import convert_raster
+import osmnx as ox
+import pickle, gzip
 
 app = Flask(__name__)
 CORS(app)
@@ -105,7 +109,6 @@ def ingest_physical_layer():
     payload = request.get_json(silent=True) or {}
     pl = payload
     problems = []
-
     
     pl_id = pl.get("id")
     datafile = pl.get("datafile")
@@ -131,6 +134,26 @@ def ingest_physical_layer():
             out_path = OUT_DIR / out_name
             
             gdf_out.to_file(out_path, driver="GeoJSON")
+
+            if(tag == "roads"):
+                roi_kind, roi_ = load_roi_mask(roi)
+                if roi_kind == "bbox":
+                    xmin, ymin, xmax, ymax = roi_
+                    with gzip.open("./data/%s/roads.pkl.gz" % datafile, "rb") as f:
+                        G = pickle.load(f)
+
+                    nodes, _ = ox.graph_to_gdfs(G, nodes=True, edges=True, fill_edge_geometry=False)
+                    mask = (
+                        (nodes["y"] <= ymax) & (nodes["y"] >= ymin) &
+                        (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
+                    )
+                    node_ids = nodes.loc[mask].index
+                    G_crop = G.subgraph(node_ids)
+
+                    with gzip.open("%s/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
+                        pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+                    print(f"Saved cropped road graph to: {OUT_DIR}/{pl_id}_roads.pkl.gz")
 
         except Exception as e:
             error_msg = f"[ERROR] Layer {pl_id}:{tag} → {type(e).__name__}: {e}"
@@ -160,6 +183,19 @@ def update_physical_layer():
 
     with open(filepath, "w") as f:
         json.dump(geojson, f)
+
+    return jsonify({"status": "success"}), 200
+
+@app.route("/api/convert-to-raster", methods=["POST"])
+def convert_to_raster():
+    data = request.get_json()
+    pl_id = data["physicalLayerRef"]
+    tag = data["tag"]
+    feature = data["feature"]
+    zoom = data["zoom"]
+    dir = OUT_DIR
+
+    # convert_raster(dir, pl_id, tag, feature, zoom)
 
     return jsonify({"status": "success"}), 200
 
