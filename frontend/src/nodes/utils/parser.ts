@@ -9,7 +9,6 @@ export function parseView(raw: any): ParsedView[] {
       physicalLayerRef: v.physical_layer?.ref,
       thematicLayerRef: v.thematic_layer?.ref,
       type: v.type,
-      projection: v.projection,
       zoom_pan: v.zoom_pan,
       layers: [],
     };

@@ -11,7 +11,6 @@ export type ViewDef = {
   physical_layer?: { ref: string };
   thematic_layer?: { ref: string };
   type: string;
-  projection?: string;
   zoom_pan?: boolean;
   layers?: { tag: string; style: Record<string, any> }[];
   style?: Record<string, any>;
@@ -28,7 +27,6 @@ export type ParsedView = {
   physicalLayerRef?: string;
   thematicLayerRef?: string;
   type: "vector" | "raster";
-  projection?: string;
   zoom_pan?: boolean;
   layers: ParsedLayer[];
 };

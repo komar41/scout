@@ -71,7 +71,7 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
           title: "Grammar • view",
           schema,
           pickInner: (v) => (v as any)?.view,
-          onClose: onCloseViewNode, // 👈 pass the handler here
+          onClose: onCloseViewNode, 
         }}
       />
       <Handle

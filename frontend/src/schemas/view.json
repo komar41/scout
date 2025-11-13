@@ -13,7 +13,6 @@
         "required": [
           "physical_layer",
           "type",
-          "projection",
           "zoom_pan",
           "layers"
         ],
@@ -28,7 +27,6 @@
             }
           },
           "type": { "type": "string" },
-          "projection": { "type": "string" },
           "zoom_pan": { "type": "boolean" },
           "layers": {
             "type": "array",

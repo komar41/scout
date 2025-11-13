@@ -352,21 +352,21 @@ const ViewportNode = memo(function ViewportNode({
       <Handle
         type="target"
         position={Position.Left}
-        id="left-handle"
+        id="viewport-in-1"
         className="vpnode__handle vpnode__handle--left"
       />
 
       <Handle
         type="source"
         position={Position.Right}
-        id="right-handle"
+        id="viewport-out"
         className="vpnode__handle vpnode__handle--right"
       />
 
       <Handle
         type="target"
         position={Position.Bottom}
-        id="top-handle"
+        id="viewport-in-2"
         className="vpnode__handle vpnode__handle--bottom"
       />
     </div>

@@ -1,7 +1,6 @@
-export type TemplateKey = "physical_layer" | "view" | "interaction";
+export type TemplateKey = "physical_layer" | "view" | "interaction" | "transformation";
 // | "choice"
 // | "join"
-// | "transformation"
 
 export const physicalLayerTemplate = {
   physical_layer: {
@@ -29,7 +28,6 @@ export const viewTemplate = {
     {
       physical_layer: { ref: "baselayer-0" },
       type: "vector",
-      projection: "mercator",
       zoom_pan: true,
       layers: [
         {
@@ -57,7 +55,19 @@ export const viewTemplate = {
 
 export const choiceTemplate = { choice: {} };
 export const joinTemplate = { join: {} };
-export const transformationTemplate = { transformation: {} };
+
+export const transformationTemplate = { 
+  transformation: {
+    id: "rasters-baselayer-0",
+    physical_layer: { "ref": "baselayer-0" },
+    operation: "rasterize",
+    layer: {
+      tag: "buildings",
+      feature: "height"
+    }
+}
+};
+
 export const interactionTemplate = {
   interaction: {
     id: "interaction-0",
@@ -75,7 +85,7 @@ export const TEMPLATES: Record<TemplateKey, any> = {
   view: viewTemplate,
   // choice: choiceTemplate,
   // join: joinTemplate,
-  // transformation: transformationTemplate,
+  transformation: transformationTemplate,
   interaction: interactionTemplate,
 };
 
@@ -84,6 +94,6 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   view: "view",
   // choice: "choice",
   // join: "join",
-  // transformation: "transformation",
+  transformation: "transformation",
   interaction: "interaction",
 };
