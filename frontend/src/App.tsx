@@ -20,6 +20,7 @@ import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
 import { ViewNodeData } from "./nodes/ViewNode";
 import type { ViewportNodeData } from "./nodes/ViewportNode";
+import { TransformationNodeData } from "./nodes/TransformationNode";
 
 export default function App() {
   return (
@@ -117,6 +118,60 @@ function Canvas() {
     [getNode, getEdges, setNodes]
   );
 
+  const pushViewportToTransformation = useCallback(
+    (srcId: string, trgId?: string) => {
+      // console.log("Pushing interactions to viewport", srcId, trgId);
+      const src = getNode(srcId);
+      if (!src || src.type !== "viewportNode") return;
+
+      const val: any = (src.data as ViewportNodeData);
+      const pls = val?.physical_layers;
+      if (!pls) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          
+          if (!targetIds.includes(n.id) || n.type !== "transformationNode") return n;
+
+          const existing = (n.data as TransformationNodeData).physical_layers ?? [];
+          
+          const nextPhysicalLayers = [
+            ...existing,
+          ];
+
+          for (const item of pls) {
+            const idx = nextPhysicalLayers.findIndex((e) => e.id === item.id);
+
+            if (idx !== -1) {
+              nextPhysicalLayers[idx] = item;
+            } else {
+              nextPhysicalLayers.push(item);
+            }
+          }
+
+          console.log("Next physical layers for transformation:", nextPhysicalLayers);
+
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              physical_layers: nextPhysicalLayers,
+            } as TransformationNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
+
   const pushViewToViewports = useCallback(
     (srcId: string, trgId?: string) => {
       // console.log("Pushing view to viewports", srcId, trgId);
@@ -173,8 +228,12 @@ function Canvas() {
 
   const addViewport = useCallback(() => {
     const nextId = `viewport-${idCounter.current++}`;
-    createViewportNode({ id: nextId, setNodes });
-  }, [setNodes]);
+    createViewportNode({
+    id: nextId,
+    setNodes,
+    onRunViewport: pushViewportToTransformation,
+  });
+  }, [setNodes, pushViewportToTransformation]);
 
   // --- allow only physicalLayerNode -> viewNode
   const allow = useCallback(
@@ -189,8 +248,10 @@ function Canvas() {
         src.type === "viewNode" && trg.type === "viewportNode";
       const interactionToViewport =
         src.type === "interactionNode" && trg.type === "viewportNode";
+      const viewportToTransformation = 
+        src.type === "viewportNode" && trg.type === "transformationNode";
 
-      return physToView || viewToViewport || interactionToViewport;
+      return physToView || viewToViewport || interactionToViewport || viewportToTransformation;
     },
     [getNode]
   );
@@ -222,6 +283,11 @@ function Canvas() {
         pushInteractionToViewport(srcId, trgId);
         return;
       }
+
+      if (src.type === "viewportNode" && trg.type === "transformationNode") {
+        pushViewportToTransformation(srcId, trgId);
+        return;
+      }
     },
     [
       allow,
@@ -230,6 +296,7 @@ function Canvas() {
       pushPhysicalToViews,
       pushViewToViewports,
       pushInteractionToViewport,
+      pushViewportToTransformation,
     ]
   );
 
@@ -327,6 +394,7 @@ const kindToType: Record<TemplateKey, keyof typeof nodeTypes> = {
   physical_layer: "physicalLayerNode",
   view: "viewNode",
   interaction: "interactionNode",
+  transformation: "transformationNode",
 };
 
 function createGrammarNode({
@@ -376,6 +444,11 @@ function createGrammarNode({
         } else if (node.type === "interactionNode") {
           onRunInteraction(nodeId);
         }
+        else if (node.type === "transformationNode") {
+          const data = node.data as TransformationNodeData;
+          console.log("Transformation node data:", data);
+        }
+
       },
     },
   };
@@ -387,12 +460,14 @@ function createViewportNode({
   id,
   setNodes,
   data,
+  onRunViewport,
 }: {
   id: string;
   setNodes: React.Dispatch<
     React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
   >;
   data?: { center?: [number, number]; zoom?: number };
+  onRunViewport?: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
 
@@ -405,7 +480,11 @@ function createViewportNode({
     data: {
       center: data?.center ?? [41.881, -87.63],
       zoom: data?.zoom ?? 14,
+      onRun: onRunViewport
+        ? (srcId: string) => onRunViewport(srcId)
+        : undefined,
     },
+    
   };
 
   setNodes((nds) => nds.concat(newNode));

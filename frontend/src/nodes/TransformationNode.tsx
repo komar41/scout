@@ -5,38 +5,54 @@ import type { NodeProps, Node } from "@xyflow/react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/transformation.json";
-
+import { PhysicalLayerDef } from "./utils/types";
+import runPng from "../assets/run.png";
 import "./BaseGrammarNode.css";
 
-// import { ViewportNodeData } from "./ViewportNode";
+export type TransformationNodeData = BaseNodeData & {
+  physical_layers?: PhysicalLayerDef[];
+};
 
-export type TransformationNodeData = BaseNodeData;
-
-export type TransformationNode = Node<TransformationNodeData, "transformationNode">;
+export type TransformationNode = Node<
+  TransformationNodeData,
+  "transformationNode"
+>;
 
 const TransformationNode = memo(function TransformationNode(
   props: NodeProps<TransformationNode>
 ) {
   const { id, data, selected } = props;
-  const { getNode, getEdges, setNodes, setEdges } = useReactFlow();
 
-  const onCloseTransformationNode = useCallback(
-    (nodeId: string) => {
-      const n = getNode(nodeId);
-      if (!n || n.type !== "transformationNode") return;
+  const RunTransformation = useCallback(
+    async (nodeData?: TransformationNodeData) => {
+      const p_layers = nodeData?.physical_layers || [];
+      const grammar = (nodeData as TransformationNodeData).value as any;
+      if (!grammar.transformation.physical_layer) return;
 
-      // will fill this later. Have to remove connection from viewport and model
+      const pl = grammar.transformation.physical_layer.ref;
+      const matchedLayer = p_layers.find((plDef) => plDef.id === pl);
 
+      if (!matchedLayer) return;
+      if (grammar.transformation.operation !== "rasterize") return;
 
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:5000/api/convert-to-raster",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(grammar.transformation),
+          }
+        );
 
-      // 3) Remove all edges touching this node
-      setEdges((eds) =>
-        eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
-      );
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+      } catch (err) {
+        console.error("Error sending data to Flask:", err);
+      }
     },
-    [
-        // getNode, getEdges, setNodes, setEdges
-    ]
+    []
   );
 
   return (
@@ -46,24 +62,39 @@ const TransformationNode = memo(function TransformationNode(
         selected={selected}
         data={{
           ...data,
-          title: "Grammar • interaction",
+          title: "Grammar • transformation",
           schema,
           pickInner: (v) => (v as any)?.transformation,
-          onClose: onCloseTransformationNode,
-          // no custom onClose; BaseGrammarNode default remove is fine
+          // onClose: onCloseTransformationNode,
+          footerActions: (
+            <button
+              type="button"
+              onClick={async () => {
+                await RunTransformation(data);
+              }}
+              title="Run transformation"
+              aria-label="Run transformation"
+              className="gnode__actionBtn"
+            >
+              <img
+                src={runPng}
+                alt="Run transformation"
+                className="gnode__actionIcon"
+              />
+            </button>
+          ),
         }}
       />
 
       <Handle
-        type="source"
+        type="target"
         position={Position.Left}
         id="transformation-in"
         className="gnode__handle gnode__handle--left"
       />
 
-      {/* Source: to ViewportNode */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
         id="transformation-out"
         className="gnode__handle gnode__handle--right"

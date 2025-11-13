@@ -175,7 +175,7 @@ def elevation(filtered, bbox):
     return values
 
 def create_image(values, i, j, zoom, max_height, outputfolder):
-    filename = '%s/%d_%d_%d.png'%(outputfolder,zoom,i,j)
+    filename = '%s/%d_%d.png'%(outputfolder,i,j)
     success = cv2.imwrite(filename, 255.0 * (values / max_height))
     if not success:
         raise Exception("Could not write image")
@@ -197,8 +197,9 @@ def compute_tile(gdf, i, j, zoom, max_height, outputfolder):
     # else:
     #     print(f"No data for tile {zoom}/{i}/{j}")
 
-def convert_raster(dir, pl_id, tag, feature, zoom):
-    filepath = dir / f"{pl_id}_{tag}.geojson"
+def convert_raster(dir, pl_id, id, tag, feature, zoom):
+    filepath = dir / 'vector' / f"{pl_id}_{tag}.geojson"
+    
     gdf = gpd.read_file(filepath)
 
     min_lon, min_lat, max_lon, max_lat = gdf.total_bounds
@@ -214,7 +215,8 @@ def convert_raster(dir, pl_id, tag, feature, zoom):
     max_y = math.ceil(y1)    # bottom
 
     gdf = gdf.to_crs(epsg=3395)
-    outdir = dir / f"{pl_id}_{tag}_{zoom}_{feature}_raster"
+    outdir = dir / 'raster' / f"{id}_{tag}_{zoom}_{feature}"
+    outdir.mkdir(parents=True, exist_ok=True)
 
     if tag == "buildings" and feature == "height":
         outdir.mkdir(parents=True, exist_ok=True)

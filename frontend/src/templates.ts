@@ -1,4 +1,8 @@
-export type TemplateKey = "physical_layer" | "view" | "interaction" | "transformation";
+export type TemplateKey =
+  | "physical_layer"
+  | "view"
+  | "interaction"
+  | "transformation";
 // | "choice"
 // | "join"
 
@@ -56,16 +60,17 @@ export const viewTemplate = {
 export const choiceTemplate = { choice: {} };
 export const joinTemplate = { join: {} };
 
-export const transformationTemplate = { 
+export const transformationTemplate = {
   transformation: {
     id: "rasters-baselayer-0",
-    physical_layer: { "ref": "baselayer-0" },
+    physical_layer: { ref: "baselayer-0" },
     operation: "rasterize",
+    zoom: 16,
     layer: {
       tag: "buildings",
-      feature: "height"
-    }
-}
+      feature: "height",
+    },
+  },
 };
 
 export const interactionTemplate = {

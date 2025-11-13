@@ -140,7 +140,7 @@ export async function renderPhysicalLayersForViews(opts: {
       continue;
     }
 
-    console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
+    // console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
 
     // If you’ve already moved zIndex into ParsedLayer, just sort on a.zIndex / b.zIndex
     const layers = [...(view.layers ?? [])].sort((a: any, b: any) => {

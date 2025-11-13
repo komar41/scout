@@ -89,7 +89,7 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
   useMemo(() => {
     runValidation(innerValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validate]); // re-run when schema (and thus validate) changes
+  }, [validate]); // update when schema (and thus validate) changes
 
   const title = data?.title ?? "Grammar";
   const overallValid = isValid && !hasSyntaxError;
@@ -154,11 +154,11 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
         <button
           type="button"
           onClick={onRun}
-          title="Re-run"
-          aria-label="Re-run"
+          title="update"
+          aria-label="update"
           className="gnode__actionBtn"
         >
-          <img src={restartPng} alt="Re-run" className="gnode__actionIcon" />
+          <img src={restartPng} alt="update" className="gnode__actionIcon" />
         </button>
 
         {data.footerActions}
