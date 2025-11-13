@@ -18,7 +18,11 @@ CORS(app)
 
 DATA_DIR = Path("data")        
 OUT_DIR  = Path("data/served")
+vector_subdir = Path(OUT_DIR / "vector")
+raster_subdir = Path(OUT_DIR / "raster")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+vector_subdir.mkdir(parents=True, exist_ok=True)
+raster_subdir.mkdir(parents=True, exist_ok=True)
 
 # Remove cached outputs on exit
 def cleanup_served():
@@ -92,15 +96,28 @@ def select_features(gdf: gpd.GeoDataFrame, features: list[str]) -> gpd.GeoDataFr
     
     return gdf[cols]
 
-@app.get("/generated/<path:filename>")
-def serve_generated(filename: str):
-    # Only allow .geojson files from OUT_DIR
+@app.get("/generated/raster/<path:filename>")
+def serve_raster(filename: str):
     if not filename.lower().endswith(".geojson"):
         abort(404)
+
     return send_from_directory(
-        OUT_DIR, filename,
-        mimetype="application/geo+json",  # fine if omitted; browsers still parse
-        conditional=True                  # enables ETag/If-None-Match
+        raster_subdir,
+        filename,
+        mimetype="application/geo+json",
+        conditional=True
+    )
+
+@app.get("/generated/vector/<path:filename>")
+def serve_vector(filename: str):
+    if not filename.lower().endswith(".geojson"):
+        abort(404)
+
+    return send_from_directory(
+        vector_subdir,
+        filename,
+        mimetype="application/geo+json",
+        conditional=True
     )
 
 @app.post('/api/ingest-physical-layer')
@@ -130,7 +147,7 @@ def ingest_physical_layer():
             gdf_cut = crop_gdf(gdf, roi)
             gdf_out = select_features(gdf_cut, features)
 
-            out_name = f"{pl_id}_{tag}.geojson"
+            out_name = f"vector/{pl_id}_{tag}.geojson"
             out_path = OUT_DIR / out_name
             
             gdf_out.to_file(out_path, driver="GeoJSON")
@@ -148,12 +165,12 @@ def ingest_physical_layer():
                         (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
                     )
                     node_ids = nodes.loc[mask].index
-                    G_crop = G.subgraph(node_ids)
+                    G_crop = G.subgraph(node_ids).copy()
 
-                    with gzip.open("%s/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
+                    with gzip.open("%s/vector/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
                         pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-                    print(f"Saved cropped road graph to: {OUT_DIR}/{pl_id}_roads.pkl.gz")
+                    print(f"Saved cropped road graph to: {OUT_DIR}/vector/{pl_id}_roads.pkl.gz")
 
         except Exception as e:
             error_msg = f"[ERROR] Layer {pl_id}:{tag} → {type(e).__name__}: {e}"
@@ -178,7 +195,7 @@ def update_physical_layer():
     tag = data["tag"]
     geojson = data["geojson"]
 
-    filename = f"{pl_id}_{tag}.geojson"
+    filename = f"vector/{pl_id}_{tag}.geojson"
     filepath = OUT_DIR / filename
 
     with open(filepath, "w") as f:
@@ -206,5 +223,7 @@ if __name__ == '__main__':
         shutil.rmtree(OUT_DIR, ignore_errors=True)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    vector_subdir.mkdir(parents=True, exist_ok=True)
+    raster_subdir.mkdir(parents=True, exist_ok=True)
 
     app.run(host='0.0.0.0', port=5000, debug=True)

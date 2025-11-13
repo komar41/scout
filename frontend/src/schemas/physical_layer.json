@@ -4,9 +4,10 @@
   "type": "object",
   "additionalProperties": false,
 
-  "required": ["id", "datafile", "region_of_interest", "layers"],
+  "required": ["id", "type", "datafile", "region_of_interest", "layers"],
   "properties": {
     "id": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "enum": ["raster", "vector"] },
     "datafile": { "type": "string", "minLength": 1 },
     "region_of_interest": {
       "type": "object",

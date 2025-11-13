@@ -39,7 +39,7 @@ function Canvas() {
 
   const pushPhysicalToViews = useCallback(
     (srcId: string, trgId?: string) => {
-      console.log("Pushing physical layer to views", srcId, trgId);
+      // console.log("Pushing physical layer to views", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "physicalLayerNode") return;
 
@@ -79,7 +79,7 @@ function Canvas() {
 
   const pushInteractionToViewport = useCallback(
     (srcId: string, trgId?: string) => {
-      console.log("Pushing interactions to viewport", srcId, trgId);
+      // console.log("Pushing interactions to viewport", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "interactionNode") return;
 
@@ -119,7 +119,7 @@ function Canvas() {
 
   const pushViewToViewports = useCallback(
     (srcId: string, trgId?: string) => {
-      console.log("Pushing view to viewports", srcId, trgId);
+      // console.log("Pushing view to viewports", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "viewNode") return;
 
@@ -140,7 +140,7 @@ function Canvas() {
           if (!targetIds.includes(n.id)) return n;
 
           if (n.type !== "viewportNode") return n;
-          console.log("Updating viewport node", n.id);
+          // console.log("Updating viewport node", n.id);
           return { ...n, data: { ...n.data, view: viewSpec, physical_layers } };
         })
       );

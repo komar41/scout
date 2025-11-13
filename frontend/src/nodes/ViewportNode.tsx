@@ -142,6 +142,8 @@ const ViewportNode = memo(function ViewportNode({
         interaction: nodeData.interactions,
       });
 
+      const physicalLayers = nodeData.physical_layers;
+
       if (!parsed || !parsed.length) {
         clearAllSvgLayers();
         return;
@@ -152,6 +154,7 @@ const ViewportNode = memo(function ViewportNode({
         map,
         parsedViews: parsed,
         parsedInteractions: parsedInteractions,
+        physicalLayers,
         clearAllSvgLayers,
         makeLeafletPath,
         getOrCreateTagGroup,

@@ -1,6 +1,7 @@
 // types.ts
 export type PhysicalLayerDef = {
   id: string;
+  type: "raster" | "vector";
   datafile: string;
   region_of_interest: { type: "bbox" | "geojson"; value: number[] | string };
   layers: { tag: string; features: string[] }[];
