@@ -206,13 +206,15 @@ def update_physical_layer():
 @app.route("/api/convert-to-raster", methods=["POST"])
 def convert_to_raster():
     data = request.get_json()
-    pl_id = data["physicalLayerRef"]
-    tag = data["tag"]
-    feature = data["feature"]
+    pl_id = data["physical_layer"]["ref"]
+    id = data["id"]
+    tag = data["layer"]["tag"]
+    feature = data["layer"]["feature"]
     zoom = data["zoom"]
+    
     dir = OUT_DIR
 
-    # convert_raster(dir, pl_id, tag, feature, zoom)
+    convert_raster(dir, pl_id, id, tag, feature, zoom)
 
     return jsonify({"status": "success"}), 200
 

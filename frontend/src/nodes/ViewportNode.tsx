@@ -5,17 +5,18 @@ import L, { geoJson } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
-import persistPng from "../assets/fetch.png";
+import persistPng from "../assets/update-data.png";
 import * as d3 from "d3";
 import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
 import { parseInteraction, parseView } from "./utils/parser";
 import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
+import { TransformationNodeData } from "./TransformationNode";
 
 export type ViewportNodeData = {
   center?: [number, number];
   zoom?: number;
   onClose?: (id: string) => void;
-  onRun?: (id: string) => void;
+  onRun?: (srcId: string, trgId?: string) => void;
   physical_layers?: PhysicalLayerDef[];
   view?: ViewDef[];
   interactions?: InteractionDef[];
@@ -28,6 +29,7 @@ const ViewportNode = memo(function ViewportNode({
   data,
   selected,
 }: NodeProps<ViewportNode>) {
+  const { getEdges, setNodes, setEdges } = useReactFlow();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
@@ -289,7 +291,40 @@ const ViewportNode = memo(function ViewportNode({
   const onClose = useCallback(() => {
     if (data?.onClose) return data.onClose(id);
     rf.setNodes((nds) => nds.filter((n) => n.id !== id));
-  }, [data, id, rf]);
+
+    const curEdges = getEdges();
+
+    // All targets currently connected FROM this view node
+    const targetIds = curEdges
+      .filter((e) => e.source === id)
+      .map((e) => e.target);
+
+    // 1) Clear physical_layers and view on connected viewport nodes
+    setNodes((nds) =>
+      nds
+        .map((nn) => {
+          if (nn.type !== "transformationNode" || !targetIds.includes(nn.id))
+            return nn;
+
+          const td = nn.data as TransformationNodeData;
+          const nextData: TransformationNodeData = {
+            ...td,
+            physical_layers: undefined,
+          };
+
+          console.log(nextData);
+          return { ...nn, data: nextData };
+        })
+        // 2) Remove this view node itself
+        .filter((nn) => nn.id !== id)
+    );
+
+    // 3) Remove all edges touching the closed view node
+    setEdges((eds) =>
+      eds.filter((e) => e.source !== id && e.target !== id)
+    );
+    
+  }, [data, id, rf, getEdges, setNodes, setEdges]);
 
   const onRun = useCallback(() => {
     if (data?.onRun) return data.onRun(id);
@@ -328,11 +363,11 @@ const ViewportNode = memo(function ViewportNode({
         <button
           type="button"
           onClick={onRun}
-          title="Re-run"
-          aria-label="Re-run"
+          title="update"
+          aria-label="update"
           className="vpnode__actionBtn"
         >
-          <img src={restartPng} alt="Re-run" className="vpnode__actionIcon" />
+          <img src={restartPng} alt="update" className="vpnode__actionIcon" />
         </button>
         <button
           type="button"

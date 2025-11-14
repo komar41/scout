@@ -109,7 +109,7 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
           title: "Grammar • physical_layer",
           schema,
           pickInner: (v) => (v as any)?.physical_layer,
-
+          onClose: onClosePhysicalNode,
           // NEW: second footer button just for physical layer
           footerActions: (
             <button

@@ -16,6 +16,11 @@ import InteractionNode, {
   InteractionNodeData,
 } from "./InteractionNode";
 
+import TransformationNode, {
+  TransformationNode as TransformationNodeType,
+  TransformationNodeData,
+} from "./TransformationNode";
+
 // register all implemented node types
 export const nodeTypes = {
   physicalLayerNode: PhysicalLayerNode,
@@ -23,7 +28,7 @@ export const nodeTypes = {
   viewportNode: ViewportNode,
   interactionNode: InteractionNode,
   // joinNode: JoinNode,
-  // transformationNode: TransformationNode,
+  transformationNode: TransformationNode,
   // choiceNode: ChoiceNode,
 } as const;
 
@@ -32,10 +37,12 @@ export type AnyNode =
   | PhysicalLayerNodeType
   | ViewNodeType
   | ViewportNodeType
-  | InteractionNodeType;
+  | InteractionNodeType
+  | TransformationNodeType;
 
 export type AnyNodeData =
   | BaseNodeData
   | ViewNodeData
   | ViewportNodeData
-  | InteractionNodeData;
+  | InteractionNodeData
+  | TransformationNodeData;

@@ -86,7 +86,7 @@ const InteractionNode = memo(function InteractionNode(
       <Handle
         type="source"
         position={Position.Left}
-        id="view-in-1"
+        id="interaction-out-1"
         className="interactionnode__handle"
       />
 
@@ -94,7 +94,7 @@ const InteractionNode = memo(function InteractionNode(
       <Handle
         type="source"
         position={Position.Right}
-        id="view-in-2"
+        id="interaction-out-2"
         className="interactionnode__handle"
       />
     </>
