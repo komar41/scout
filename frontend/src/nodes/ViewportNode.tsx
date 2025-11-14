@@ -27,7 +27,6 @@ export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
 const ViewportNode = memo(function ViewportNode({
   id,
   data,
-  selected,
 }: NodeProps<ViewportNode>) {
   const { getEdges, setNodes, setEdges } = useReactFlow();
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -134,7 +133,8 @@ const ViewportNode = memo(function ViewportNode({
       const map = leafletRef.current;
 
       // If map not ready OR no spec -> clear drawings and bail
-      if (!map || !nodeData?.view?.length || !nodeData.physical_layers) {
+      if (!map || !nodeData?.view?.length) {
+        // || !nodeData.physical_layers.. For now skipping it...
         if (map) clearAllSvgLayers();
         return;
       }
@@ -320,10 +320,7 @@ const ViewportNode = memo(function ViewportNode({
     );
 
     // 3) Remove all edges touching the closed view node
-    setEdges((eds) =>
-      eds.filter((e) => e.source !== id && e.target !== id)
-    );
-    
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
   }, [data, id, rf, getEdges, setNodes, setEdges]);
 
   const onRun = useCallback(() => {
@@ -335,7 +332,7 @@ const ViewportNode = memo(function ViewportNode({
 
   return (
     <div className="vpnode">
-      <NodeResizer isVisible={!!selected} />
+      <NodeResizer />
 
       <div className="vpnode__header">
         <div className="vpnode__title">Viewport</div>

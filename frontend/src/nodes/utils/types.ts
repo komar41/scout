@@ -28,6 +28,8 @@ export type ParsedView = {
   thematicLayerRef?: string;
   type: "vector" | "raster";
   zoom_pan?: boolean;
+  colormap?: string;
+  zoom_level?: number;
   layers: ParsedLayer[];
 };
 

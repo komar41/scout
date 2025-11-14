@@ -35,7 +35,6 @@ function fmt(errs: ErrorObject[] | null | undefined, max = 4): string[] {
 const BaseGrammarNode = memo(function BaseGrammarNode({
   id,
   data,
-  selected,
 }: NodeProps<BaseNode>) {
   const [errors, setErrors] = useState<string[]>([]);
   const [isValid, setIsValid] = useState<boolean>(true);
@@ -106,7 +105,7 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
   return (
     <div className="gnode">
-      <NodeResizer isVisible={!!selected} minWidth={300} minHeight={180} />
+      <NodeResizer minWidth={300} minHeight={180} />
 
       {/* Header */}
       <div className="gnode__header">

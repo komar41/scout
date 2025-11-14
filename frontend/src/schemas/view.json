@@ -9,13 +9,8 @@
     "oneOf": [
       {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "physical_layer",
-          "type",
-          "zoom_pan",
-          "layers"
-        ],
+        "additionalProperties": true,
+        "required": ["physical_layer", "type"],
         "not": { "required": ["thematic_layer"] },
         "properties": {
           "physical_layer": {
@@ -45,8 +40,8 @@
       },
       {
         "type": "object",
-        "additionalProperties": false,
-        "required": ["thematic_layer", "type", "style"],
+        "additionalProperties": true,
+        "required": ["thematic_layer", "type"],
         "not": { "required": ["physical_layer"] },
         "properties": {
           "thematic_layer": {
@@ -58,7 +53,7 @@
             }
           },
           "type": { "type": "string" },
-          "style": { "type": "object" }
+          "zoom_level": { "type": "number" }
         }
       }
     ]

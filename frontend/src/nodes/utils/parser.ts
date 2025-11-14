@@ -10,6 +10,8 @@ export function parseView(raw: any): ParsedView[] {
       thematicLayerRef: v.thematic_layer?.ref,
       type: v.type,
       zoom_pan: v.zoom_pan,
+      colormap: v.colormap,
+      zoom_level: v.zoom_level,
       layers: [],
     };
 

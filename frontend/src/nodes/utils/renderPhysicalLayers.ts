@@ -11,6 +11,24 @@ type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
 /**
  * Map ParsedInteraction -> InteractionSpec for a given layer.
  */
+
+function tile2lat(y: number, z: number) {
+  const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, z);
+  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+function tile2lon(x: number, z: number) {
+  return (x / Math.pow(2, z)) * 360 - 180;
+}
+
+function tileBoundsFromXYZ(x: number, y: number, z: number): L.LatLngBounds {
+  const north = tile2lat(y, z);
+  const west = tile2lon(x, z);
+  const south = tile2lat(y + 1, z);
+  const east = tile2lon(x + 1, z);
+  return L.latLngBounds([south, west], [north, east]);
+}
+
 function buildInteractionSpecsForLayer(opts: {
   interactions: ParsedInteraction[];
   plId: string;
@@ -115,8 +133,9 @@ export async function renderPhysicalLayersForViews(opts: {
   } = opts;
 
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
+  const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
 
-  if (!physicalViews.length) {
+  if (!physicalViews.length && !thematicViews.length) {
     clearAllSvgLayers();
     return;
   }
@@ -126,8 +145,74 @@ export async function renderPhysicalLayersForViews(opts: {
   let unionBounds: L.LatLngBounds | null = null;
   const path = makeLeafletPath(map);
 
+  for (const view of thematicViews) {
+    const thId = view.thematicLayerRef;
+    if (!thId) continue;
+    if (view.type === "raster") {
+      const z = view.zoom_level ?? 16;
+
+      const tiles = await fetch(
+        `http://127.0.0.1:5000/api/list-rasters/${thId}`
+      ).then((r) => r.json()); // [ "16812_24353.png", ... ]
+
+      // console.log(tiles, "<<< thematic tiles");
+
+      for (const name of tiles) {
+        const [xStr, yStr] = name.replace(".png", "").split("_");
+        const x = Number(xStr);
+        const y = Number(yStr);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}`;
+
+        // compute bounds for this tile at zoom z
+        const bounds = tileBoundsFromXYZ(x, y, z); // you implement this
+
+        const overlay = L.imageOverlay(url, bounds, {
+          opacity: (view as any).opacity ?? 1,
+        });
+
+        overlay.addTo(map);
+        unionBounds = unionBounds ? unionBounds.extend(bounds) : bounds;
+      }
+    }
+  }
+
   for (const view of physicalViews) {
     const plId = view.physicalLayerRef;
+    if (!plId) continue;
+    // ----- RASTER VIEWS -----
+    if (view.type === "raster") {
+      const z = view.zoom_level ?? 16;
+
+      const tiles = await fetch(
+        `http://127.0.0.1:5000/api/list-rasters/${plId}`
+      ).then((r) => r.json()); // [ "16812_24353.png", ... ]
+
+      const filtered = tiles.filter((n) => n.endsWith("_.png"));
+
+      for (const name of filtered) {
+        const [xStr, yStr] = name.replace(".png", "").split("_");
+        const x = Number(xStr);
+        const y = Number(yStr);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}`;
+
+        // compute bounds for this tile at zoom z
+        const bounds = tileBoundsFromXYZ(x, y, z); // you implement this
+
+        const overlay = L.imageOverlay(url, bounds, {
+          opacity: (view as any).opacity ?? 1,
+        });
+
+        overlay.addTo(map);
+        unionBounds = unionBounds ? unionBounds.extend(bounds) : bounds;
+      }
+
+      continue; // skip vector logic for this view
+    }
+    if (view.type !== "vector") continue;
 
     // If no id → invalid
     if (!plId) continue;

@@ -175,9 +175,16 @@ def elevation(filtered, bbox):
     return values
 
 def create_image(values, i, j, zoom, max_height, outputfolder):
+    filename_ = '%s/%d_%d_.png'%(outputfolder,i,j)
     filename = '%s/%d_%d.png'%(outputfolder,i,j)
-    success = cv2.imwrite(filename, 255.0 * (values / max_height))
-    if not success:
+
+    values = 255.0 * (values / max_height)
+    success_ = cv2.imwrite(filename, values)
+
+    arr = 255 - values
+    success = cv2.imwrite(filename_, arr)
+
+    if not success or not success_:
         raise Exception("Could not write image")
         
 # @dask.delayed
@@ -215,7 +222,7 @@ def convert_raster(dir, pl_id, id, tag, feature, zoom):
     max_y = math.ceil(y1)    # bottom
 
     gdf = gdf.to_crs(epsg=3395)
-    outdir = dir / 'raster' / f"{id}_{tag}_{zoom}_{feature}"
+    outdir = dir / 'raster' / f"{id}"
     outdir.mkdir(parents=True, exist_ok=True)
 
     if tag == "buildings" and feature == "height":

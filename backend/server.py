@@ -10,8 +10,12 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 from flask import send_from_directory, abort
 from convert_to_raster import convert_raster
+from deep_umbra import run_shadow_model
 import osmnx as ox
 import pickle, gzip
+
+import subprocess
+import tempfile
 
 app = Flask(__name__)
 CORS(app)
@@ -96,15 +100,55 @@ def select_features(gdf: gpd.GeoDataFrame, features: list[str]) -> gpd.GeoDataFr
     
     return gdf[cols]
 
+@app.get("/api/list-rasters/<plId>")
+def list_rasters(plId: str):
+    """
+    Return a JSON list of PNG raster tiles inside:
+    data/served/raster/<plId>/
+    """
+    # Resolve folder safely
+    folder = raster_subdir / plId
+
+    # Security: ensure path is inside raster_subdir
+    try:
+        folder.resolve().relative_to(raster_subdir.resolve())
+    except Exception:
+        return jsonify({"error": "Invalid raster folder"}), 403
+
+    # Check folder exists
+    if not folder.exists() or not folder.is_dir():
+        return jsonify([]), 200   # return empty list
+
+    # Collect *.png files
+    files = [
+        f.name
+        for f in folder.iterdir()
+        if f.is_file() and f.suffix.lower() == ".png"
+    ]
+
+    return jsonify(files), 200
+
 @app.get("/generated/raster/<path:filename>")
 def serve_raster(filename: str):
-    if not filename.lower().endswith(".geojson"):
+    # works: http://127.0.0.1:5000/generated/raster/rasters-baselayer-0/16812_24353.png
+    if not filename.lower().endswith(".png"):
         abort(404)
 
+    # Resolve safe absolute path (prevents directory traversal)
+    full_path = raster_subdir / filename
+    try:
+        full_path.resolve().relative_to(raster_subdir.resolve())
+    except Exception:
+        abort(403)  # Forbidden
+
+    # parent directory + file name
+    directory = full_path.parent
+    file = full_path.name
+
     return send_from_directory(
-        raster_subdir,
-        filename,
-        mimetype="application/geo+json",
+        directory,
+        file,
+        mimetype="image/png",
         conditional=True
     )
 
@@ -217,6 +261,52 @@ def convert_to_raster():
     convert_raster(dir, pl_id, id, tag, feature, zoom)
 
     return jsonify({"status": "success"}), 200
+
+@app.post("/api/run-python")
+def run_python():
+    payload = request.get_json() or {}
+    code = payload.get("code", "")
+
+    try:
+        # Create a temp file to run code
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
+            tmp.write(code)
+            tmp_filename = tmp.name
+
+        project_dir = Path(__file__).parent
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(project_dir) + ":" + env.get("PYTHONPATH", "")
+
+        print(project_dir)
+
+        result = subprocess.run(
+            ["python3", tmp_filename],
+            capture_output=True,
+            text=True,
+            timeout=3600,
+            cwd=str(project_dir),
+            env=env
+        )
+
+        return jsonify({
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }), 200
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "stdout": "",
+            "stderr": "Execution timed out.",
+            "returncode": -1
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "stdout": "",
+            "stderr": str(e),
+            "returncode": -1
+        }), 200
 
 
 if __name__ == '__main__':
