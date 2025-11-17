@@ -4,7 +4,7 @@ import L from "leaflet";
 import { getPropertyRangeFromGeoJSON, pickInterpolator } from "./helper";
 import { applyGeometryInteractions } from "./geomInteractions";
 import type { InteractionSpec } from "./geomInteractions";
-import type { ParsedView, ParsedInteraction, PhysicalLayerDef } from "./types";
+import type { ParsedView, ParsedInteraction } from "./types";
 
 type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
 const rasterOverlays = new Set<L.ImageOverlay>();
@@ -103,7 +103,7 @@ export async function renderPhysicalLayersForViews(opts: {
   map: L.Map;
   parsedViews: ParsedView[];
   parsedInteractions: ParsedInteraction[];
-  physicalLayers: PhysicalLayerDef[];
+  // physicalLayers: PhysicalLayerDef[];
   clearAllSvgLayers: () => void;
   makeLeafletPath: (map: L.Map) => d3.GeoPath<any, d3.GeoPermissibleObjects>;
   getOrCreateTagGroup: (tag: string) => TagGroup;
@@ -119,7 +119,7 @@ export async function renderPhysicalLayersForViews(opts: {
     map,
     parsedViews,
     parsedInteractions,
-    physicalLayers,
+    // physicalLayers,
     clearAllSvgLayers,
     makeLeafletPath,
     getOrCreateTagGroup,

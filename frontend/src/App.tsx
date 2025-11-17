@@ -223,6 +223,9 @@ function Canvas() {
       const PyCodeEditorToView =
         src.type === "pyCodeEditorNode" && trg.type === "viewNode";
 
+      const PyCodeEditorToPyCodeEditor =
+        src.type === "pyCodeEditorNode" && trg.type === "pyCodeEditorNode";
+
       return (
         physToView ||
         viewToViewport ||
@@ -230,7 +233,8 @@ function Canvas() {
         viewportToPyCodeEditor ||
         viewportToTransformation ||
         transformationToPyCodeEditor ||
-        PyCodeEditorToView
+        PyCodeEditorToView ||
+        PyCodeEditorToPyCodeEditor
       );
     },
     [getNode]
