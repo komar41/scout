@@ -7,26 +7,21 @@ import type { InteractionSpec } from "./geomInteractions";
 import type { ParsedView, ParsedInteraction, PhysicalLayerDef } from "./types";
 
 type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
-
+const rasterOverlays = new Set<L.ImageOverlay>();
 /**
  * Map ParsedInteraction -> InteractionSpec for a given layer.
  */
 
-function tile2lat(y: number, z: number) {
-  const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, z);
-  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-}
+function tileBoundsFromXYZ(x: number, y: number, z: number, map: L.Map) {
+  const tileSize = 256;
 
-function tile2lon(x: number, z: number) {
-  return (x / Math.pow(2, z)) * 360 - 180;
-}
+  const nwPoint = L.point(x * tileSize, y * tileSize);
+  const sePoint = L.point((x + 1) * tileSize, (y + 1) * tileSize);
 
-function tileBoundsFromXYZ(x: number, y: number, z: number): L.LatLngBounds {
-  const north = tile2lat(y, z);
-  const west = tile2lon(x, z);
-  const south = tile2lat(y + 1, z);
-  const east = tile2lon(x + 1, z);
-  return L.latLngBounds([south, west], [north, east]);
+  const nwLatLng = map.unproject(nwPoint, z);
+  const seLatLng = map.unproject(sePoint, z);
+
+  return L.latLngBounds(nwLatLng, seLatLng);
 }
 
 function buildInteractionSpecsForLayer(opts: {
@@ -132,6 +127,12 @@ export async function renderPhysicalLayersForViews(opts: {
     shouldHandleClick,
   } = opts;
 
+  // Remove old raster overlays from previous renders
+  for (const overlay of rasterOverlays) {
+    map.removeLayer(overlay);
+  }
+  rasterOverlays.clear();
+
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
   const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
 
@@ -153,9 +154,12 @@ export async function renderPhysicalLayersForViews(opts: {
 
       const tiles = await fetch(
         `http://127.0.0.1:5000/api/list-rasters/${thId}`
-      ).then((r) => r.json()); // [ "16812_24353.png", ... ]
+      ).then((r) => r.json());
 
-      // console.log(tiles, "<<< thematic tiles");
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
 
       for (const name of tiles) {
         const [xStr, yStr] = name.replace(".png", "").split("_");
@@ -163,17 +167,39 @@ export async function renderPhysicalLayersForViews(opts: {
         const y = Number(yStr);
         if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
+        // collect extents
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+
         const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}`;
 
-        // compute bounds for this tile at zoom z
-        const bounds = tileBoundsFromXYZ(x, y, z); // you implement this
+        const bounds = tileBoundsFromXYZ(x, y, z, map);
 
+        // include opacity from view definition
         const overlay = L.imageOverlay(url, bounds, {
           opacity: (view as any).opacity ?? 1,
         });
 
         overlay.addTo(map);
-        unionBounds = unionBounds ? unionBounds.extend(bounds) : bounds;
+        rasterOverlays.add(overlay);
+      }
+
+      // final union bounds (handles missing tiles!)
+      if (minX !== Infinity) {
+        const tileSize = 256;
+        const nwPoint = L.point(minX * tileSize, minY * tileSize);
+        const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
+
+        const nwLatLng = map.unproject(nwPoint, z);
+        const seLatLng = map.unproject(sePoint, z);
+
+        const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
+
+        unionBounds = unionBounds
+          ? unionBounds.extend(rasterBounds)
+          : rasterBounds;
       }
     }
   }
@@ -189,6 +215,11 @@ export async function renderPhysicalLayersForViews(opts: {
         `http://127.0.0.1:5000/api/list-rasters/${plId}`
       ).then((r) => r.json()); // [ "16812_24353.png", ... ]
 
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
       const filtered = tiles.filter((n) => n.endsWith("_.png"));
 
       for (const name of filtered) {
@@ -197,31 +228,59 @@ export async function renderPhysicalLayersForViews(opts: {
         const y = Number(yStr);
         if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
+        // collect extents
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
         const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}`;
 
         // compute bounds for this tile at zoom z
-        const bounds = tileBoundsFromXYZ(x, y, z); // you implement this
+        const bounds = tileBoundsFromXYZ(x, y, z, map); // you implement this
 
+        // include opacity from view definition
         const overlay = L.imageOverlay(url, bounds, {
           opacity: (view as any).opacity ?? 1,
         });
 
+        // L.rectangle(bounds, {
+        //   weight: 1,
+        //   fillOpacity: 0,
+        // }).addTo(map);
+
         overlay.addTo(map);
-        unionBounds = unionBounds ? unionBounds.extend(bounds) : bounds;
+        rasterOverlays.add(overlay);
+        if (minX !== Infinity) {
+          const tileSize = 256;
+          const nwPoint = L.point(minX * tileSize, minY * tileSize);
+          const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
+
+          const nwLatLng = map.unproject(nwPoint, z);
+          const seLatLng = map.unproject(sePoint, z);
+
+          const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
+
+          unionBounds = unionBounds
+            ? unionBounds.extend(rasterBounds)
+            : rasterBounds;
+        }
       }
 
       continue; // skip vector logic for this view
     }
     if (view.type !== "vector") continue;
 
+    console.log(view);
     // If no id → invalid
     if (!plId) continue;
 
     // Find matching physical layer
-    const pl = physicalLayers.find((p) => p.id === plId);
+    // const pl = physicalLayers.find((p) => p.id === plId);
 
     // Must exist AND must be vector
-    if (!pl || pl.type !== "vector" || view.type !== "vector") {
+    if (view.type !== "vector") {
       continue;
     }
 
@@ -259,7 +318,7 @@ export async function renderPhysicalLayersForViews(opts: {
 
       const strokeColor = lyr.stroke?.color ?? "#222";
       const strokeWidth = lyr.stroke?.width ?? 1;
-      const fillOpacity = lyr.opacity ?? 0.7;
+      const fillOpacity = lyr.opacity ?? 1;
       const fallbackFill = "#6aa9ff";
 
       const gTag = getOrCreateTagGroup(tag);

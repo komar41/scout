@@ -234,7 +234,6 @@ def ingest_physical_layer():
 @app.route("/api/update-physical-layer", methods=["POST"])
 def update_physical_layer():
     data = request.get_json()
-    print(data)
     pl_id = data["physicalLayerRef"]
     tag = data["tag"]
     geojson = data["geojson"]
@@ -249,16 +248,15 @@ def update_physical_layer():
 
 @app.route("/api/convert-to-raster", methods=["POST"])
 def convert_to_raster():
+    # Using code node instead of using this api from grammar!
     data = request.get_json()
     pl_id = data["physical_layer"]["ref"]
     id = data["id"]
     tag = data["layer"]["tag"]
     feature = data["layer"]["feature"]
     zoom = data["zoom"]
-    
-    dir = OUT_DIR
 
-    convert_raster(dir, pl_id, id, tag, feature, zoom)
+    convert_raster(pl_id, tag, feature, zoom, id)
 
     return jsonify({"status": "success"}), 200
 

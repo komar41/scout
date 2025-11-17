@@ -4,6 +4,7 @@ import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
 import "./PyCodeEditorNode.css";
 import restartPng from "../assets/restart.png";
 import runPng from "../assets/run.png";
+import checkPng from "../assets/check-mark.png";
 import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
 import PythonCodeEditor from "../components/PythonCodeEditor";
 
@@ -24,6 +25,9 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
 }: NodeProps<PyCodeEditorNode>) {
   const rf = useReactFlow();
 
+  const [running, setRunning] = useState(false);
+  const [runningSuccess, setRunningSuccess] = useState(false);
+
   // NEW: store output panel data
   const [output, setOutput] = useState<{ stdout: string; stderr: string }>({
     stdout: "",
@@ -33,8 +37,6 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
   // ---------- CLOSE ACTION ----------
   const handleClose = useCallback(() => {
     if (data?.onClose) return data.onClose(id);
-
-    // default: remove this node
     rf.setNodes((nds) => nds.filter((n) => n.id !== id));
   }, [data, id, rf]);
 
@@ -46,19 +48,28 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
     }
     console.log("[PyCodeEditorNode RUN]", id, code);
 
-    const res = await fetch("http://localhost:5000/api/run-python", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
+    try {
+      setRunning(true);
+      const res = await fetch("http://localhost:5000/api/run-python", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
 
-    const result = await res.json();
+      const result = await res.json();
 
-    // Update the output panel
-    setOutput({
-      stdout: result.stdout || "",
-      stderr: result.stderr || "",
-    });
+      // Update the output panel
+      setOutput({
+        stdout: result.stdout || "",
+        stderr: result.stderr || "",
+      });
+      setRunningSuccess(true);
+      setTimeout(() => setRunningSuccess(false), 2000);
+    } catch (err) {
+      console.error("Error running code:", err);
+    } finally {
+      setRunning(false);
+    }
   }, [data, id]);
 
   // ---------- CODE CHANGE ----------
@@ -129,8 +140,15 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
           title="Run code"
           aria-label="Run code"
           className="pcenode__actionBtn"
+          disabled={running}
         >
-          <img src={runPng} alt="Run Code" className="pcenode__actionIcon" />
+          {running ? (
+            <span className="pcenode__spinner" aria-hidden="true" />
+          ) : runningSuccess ? (
+            <img src={checkPng} alt="Success" className="pcenode__actionIcon" />
+          ) : (
+            <img src={runPng} alt="Run Code" className="pcenode__actionIcon" />
+          )}
         </button>
       </div>
 

@@ -107,7 +107,7 @@
 .vpnode__handle {
   width: 10px !important;
   height: 10px !important;
-  background: #6b7280 !important;
+  background: #5c6bc0 !important;
   border: 2px solid #fff !important;
   border-radius: 50%;
   z-index: 5;
@@ -125,4 +125,20 @@
   right: 6px !important;
   background: #ff7043 !important;
   transform: translateY(-50%) !important;
+}
+
+.vpnode__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: vpnode-spin 0.8s linear infinite;
+}
+
+@keyframes vpnode-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

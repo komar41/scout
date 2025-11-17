@@ -155,7 +155,7 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 
-  height: 100px;
+  height: 60px;
   overflow-y: auto;
 
   text-align: left !important;
@@ -185,4 +185,25 @@
 .pcenode__stderr {
   text-align: left !important;
   display: block !important;
+}
+
+.pcenode__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: pcenode-spin 0.8s linear infinite;
+}
+
+@keyframes pcenode-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pcenode__actionBtn:disabled {
+  opacity: 0.7;
+  cursor: default;
 }

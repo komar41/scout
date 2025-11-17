@@ -439,7 +439,7 @@ class DeepShadow():
         checkpoint.restore(tf.train.latest_checkpoint(
             checkpoint_path)).expect_partial()
         
-def run_shadow_model(input_dir, season, colormap, output_dir):
+def run_shadow_model(input, season, colormap, output):
 
     tf.keras.backend.clear_session()
     down_stack, up_stack = get_generator_arch()
@@ -447,8 +447,8 @@ def run_shadow_model(input_dir, season, colormap, output_dir):
     deep_shadow = DeepShadow(512, 512, down_stack, up_stack, latitude=True, date=True, loss_funcs=[ssim_loss, sobel_loss, l1_loss], type='resnet9', attention=False)
     deep_shadow.restore('models/shadow')
 
-    in_dir = Path("./data/served/raster/" + input_dir)
-    out_dir = Path("./data/served/raster/" + output_dir)
+    in_dir = Path("./data/served/raster/" + input)
+    out_dir = Path("./data/served/raster/" + output)
     out_dir.mkdir(parents=True, exist_ok=True)
     date = season
     zoom = 16
@@ -507,9 +507,9 @@ def run_shadow_model(input_dir, season, colormap, output_dir):
 
 # from deep_umbra import run_shadow_model
 
-# input_dir = 'rasters-baselayer-0'
+# input = 'rasters-baselayer-0'
 # season = 'summer'
 # colormap = 'Reds'
-# output_dir = 'acc-shadow-baselayer-0'
+# output = 'acc-shadow-baselayer-0'
 
-# run_shadow_model(input_dir, season, colormap, output_dir)
+# run_shadow_model(input, season, colormap, output)

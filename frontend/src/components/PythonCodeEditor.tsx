@@ -15,7 +15,7 @@ type Props = {
 export default function PythonCodeEditor({
   value = "",
   onChange,
-  height = "420px",
+  height = "200px",
   readOnly = false,
 }: Props) {
   const [text, setText] = useState<string>(value);

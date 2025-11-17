@@ -18,7 +18,7 @@ import type { BaseNodeData } from "./nodes/BaseGrammarNode";
 
 import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
-import { ViewNodeData } from "./nodes/ViewNode";
+// import { ViewNodeData } from "./nodes/ViewNode";
 import type { ViewportNodeData } from "./nodes/ViewportNode";
 import type { PyCodeEditorNodeData } from "./nodes/PyCodeEditorNode";
 import { TransformationNodeData } from "./nodes/TransformationNode";
@@ -41,13 +41,38 @@ function Canvas() {
 
   const pushPhysicalToViews = useCallback(
     (srcId: string, trgId?: string) => {
-      // console.log("Pushing physical layer to views", srcId, trgId);
+      // Don't think we need to pass anything from physical layer to view for now!!
+      // Later might need to pass some metadata? or will remove this function!
       const src = getNode(srcId);
       if (!src || src.type !== "physicalLayerNode") return;
 
       const val: any = (src.data as BaseNodeData).value;
-      const pl = val?.physical_layer;
-      if (!pl) return;
+      const pl_def = val?.physical_layer;
+      if (!pl_def) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+    },
+    [
+      getNode,
+      getEdges,
+      // setNodes
+    ]
+  );
+
+  const pushViewToViewports = useCallback(
+    (srcId: string, trgId?: string) => {
+      // console.log("Pushing view to viewports", srcId, trgId);
+      const src = getNode(srcId);
+      if (!src || src.type !== "viewNode") return;
+
+      const value: any = (src.data as BaseNodeData).value;
+      const viewSpec = value?.view;
+      if (!Array.isArray(viewSpec)) return;
 
       const targetIds = trgId
         ? [trgId]
@@ -58,21 +83,9 @@ function Canvas() {
 
       setNodes((nds) =>
         nds.map((n) => {
-          if (!targetIds.includes(n.id) || n.type !== "viewNode") return n;
-
-          const existing = (n.data as ViewNodeData).physical_layers ?? [];
-          const already = existing.some((e) => e.id === pl.id);
-          const nextPhysicalLayers = already
-            ? existing.map((e) => (e.id === pl.id ? pl : e))
-            : [...existing, pl];
-
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              physical_layers: nextPhysicalLayers,
-            } as ViewNodeData,
-          };
+          if (!targetIds.includes(n.id)) return n;
+          if (n.type !== "viewportNode") return n;
+          return { ...n, data: { ...n.data, view: viewSpec } };
         })
       );
     },
@@ -81,7 +94,6 @@ function Canvas() {
 
   const pushInteractionToViewport = useCallback(
     (srcId: string, trgId?: string) => {
-      // console.log("Pushing interactions to viewport", srcId, trgId);
       const src = getNode(srcId);
       if (!src || src.type !== "interactionNode") return;
 
@@ -121,13 +133,12 @@ function Canvas() {
 
   const pushViewportToTransformation = useCallback(
     (srcId: string, trgId?: string) => {
-      // console.log("Pushing interactions to viewport", srcId, trgId);
+      // Don't think we need to pass anything from viewport to transformation for now!!
+      // Later might need to pass some metadata? or will remove this function!
       const src = getNode(srcId);
       if (!src || src.type !== "viewportNode") return;
 
       const val: any = src.data as ViewportNodeData;
-      const pls = val?.physical_layers;
-      if (!pls) return;
 
       const targetIds = trgId
         ? [trgId]
@@ -135,74 +146,12 @@ function Canvas() {
             .filter((e) => e.source === srcId)
             .map((e) => e.target!)
             .filter(Boolean);
-
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (!targetIds.includes(n.id) || n.type !== "transformationNode")
-            return n;
-
-          const existing =
-            (n.data as TransformationNodeData).physical_layers ?? [];
-
-          const nextPhysicalLayers = [...existing];
-
-          for (const item of pls) {
-            const idx = nextPhysicalLayers.findIndex((e) => e.id === item.id);
-
-            if (idx !== -1) {
-              nextPhysicalLayers[idx] = item;
-            } else {
-              nextPhysicalLayers.push(item);
-            }
-          }
-
-          console.log(
-            "Next physical layers for transformation:",
-            nextPhysicalLayers
-          );
-
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              physical_layers: nextPhysicalLayers,
-            } as TransformationNodeData,
-          };
-        })
-      );
     },
-    [getNode, getEdges, setNodes]
-  );
-
-  const pushViewToViewports = useCallback(
-    (srcId: string, trgId?: string) => {
-      // console.log("Pushing view to viewports", srcId, trgId);
-      const src = getNode(srcId);
-      if (!src || src.type !== "viewNode") return;
-
-      const value: any = (src.data as BaseNodeData).value;
-      const viewSpec = value?.view;
-      const physical_layers = (src.data as ViewNodeData).physical_layers;
-      if (!Array.isArray(viewSpec)) return;
-
-      const targetIds = trgId
-        ? [trgId]
-        : getEdges()
-            .filter((e) => e.source === srcId)
-            .map((e) => e.target!)
-            .filter(Boolean);
-
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (!targetIds.includes(n.id)) return n;
-
-          if (n.type !== "viewportNode") return n;
-          // console.log("Updating viewport node", n.id);
-          return { ...n, data: { ...n.data, view: viewSpec, physical_layers } };
-        })
-      );
-    },
-    [getNode, getEdges, setNodes]
+    [
+      getNode,
+      getEdges,
+      // setNodes
+    ]
   );
 
   // Then remove the oncloseNode from createGrammarNode calls and declarations
@@ -259,17 +208,29 @@ function Canvas() {
         src.type === "viewNode" && trg.type === "viewportNode";
       const interactionToViewport =
         src.type === "interactionNode" && trg.type === "viewportNode";
+
+      // This is not required, as instead of using transformation node, we are using code instead.
+      // Maybe later will remove this condition block
       const viewportToTransformation =
         src.type === "viewportNode" && trg.type === "transformationNode";
+
+      // Instead lets connect viewport to pyCodeEditorNode
+      const viewportToPyCodeEditor =
+        src.type === "viewportNode" && trg.type === "pyCodeEditorNode";
+
       const transformationToPyCodeEditor =
         src.type === "transformationNode" && trg.type === "pyCodeEditorNode";
+      const PyCodeEditorToView =
+        src.type === "pyCodeEditorNode" && trg.type === "viewNode";
 
       return (
         physToView ||
         viewToViewport ||
         interactionToViewport ||
+        viewportToPyCodeEditor ||
         viewportToTransformation ||
-        transformationToPyCodeEditor
+        transformationToPyCodeEditor ||
+        PyCodeEditorToView
       );
     },
     [getNode]
@@ -303,6 +264,8 @@ function Canvas() {
         return;
       }
 
+      // This is not required, as instead of using transformation node, we are using code instead.
+      // Maybe later will remove this if block
       if (src.type === "viewportNode" && trg.type === "transformationNode") {
         pushViewportToTransformation(srcId, trgId);
         return;
@@ -339,6 +302,8 @@ function Canvas() {
         onConnect={onConnect}
         isValidConnection={allow}
         fitView
+        minZoom={0.005}
+        maxZoom={2}
       >
         <Background />
         <Controls position="bottom-right" />

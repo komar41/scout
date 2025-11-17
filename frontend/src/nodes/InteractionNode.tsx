@@ -47,7 +47,7 @@ const InteractionNode = memo(function InteractionNode(
             const existing = vpData.interactions ?? [];
 
             const next = iId ? existing.filter((d) => d.id !== iId) : existing;
-            // console.log(next, "____");
+
             return {
               ...nn,
               data: {

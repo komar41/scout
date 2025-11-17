@@ -6,6 +6,14 @@ export type TemplateKey =
 // | "choice"
 // | "join"
 
+// for manhattan area
+// "value": [
+//   -73.995,
+//   40.749,
+//   -73.980,
+//   40.757
+// ]
+
 export const physicalLayerTemplate = {
   physical_layer: {
     id: "baselayer-0",
@@ -13,7 +21,7 @@ export const physicalLayerTemplate = {
     datafile: "chicago",
     region_of_interest: {
       type: "bbox",
-      value: [-87.645, 41.875, -87.62, 41.895],
+      value: [-87.64, 41.88, -87.625, 41.89],
     },
     layers: [
       {
@@ -102,3 +110,30 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   transformation: "transformation",
   interaction: "interaction",
 };
+
+// -------------------------------------------
+// Conversion to raster:
+// -------------------------------------------
+
+// from convert_to_raster import convert_raster
+
+// input = "baselayer-0"
+// tag = "buildings"
+// feature = "height"
+// zoom = 16
+// output = "rasters-baselayer-0"
+
+// convert_raster(input, tag, feature, zoom, output)
+
+// -------------------------------------------
+// Run shadow model:
+// -------------------------------------------
+
+// from deep_umbra import run_shadow_model
+
+// input = 'rasters-baselayer-0'
+// season = 'summer'
+// colormap = 'Reds'
+// output = 'acc-shadow-baselayer-0'
+
+// run_shadow_model(input, season, colormap, output)

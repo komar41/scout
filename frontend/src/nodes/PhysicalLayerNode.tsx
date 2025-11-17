@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { useReactFlow, Handle, Position } from "@xyflow/react";
 
@@ -6,10 +6,9 @@ import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/physical_layer.json";
 
 import fetchPng from "../assets/fetch.png";
+import checkPng from "../assets/check-mark.png";
 import "./PhysicalLayerNode.css";
 import "./BaseGrammarNode.css";
-
-import type { ViewNodeData } from "./ViewNode";
 
 export type PhysicalLayerNode = Node<BaseNodeData, "physicalLayerNode">;
 
@@ -17,7 +16,10 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
   props: NodeProps<PhysicalLayerNode>
 ) {
   const { id, data, selected } = props;
-  const { getNode, getEdges, setNodes, setEdges } = useReactFlow();
+  const rf = useReactFlow();
+  const { setEdges } = useReactFlow();
+  const [loading, setLoading] = useState(false);
+  const [loadingSuccess, setLoadingSuccess] = useState(false);
 
   const onFetch = useCallback(async () => {
     const val: any = (data.value as any)?.physical_layer;
@@ -28,6 +30,8 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
     }
 
     try {
+      setLoading(true);
+      setLoadingSuccess(false);
       const response = await fetch(
         "http://127.0.0.1:5000/api/ingest-physical-layer",
         {
@@ -43,60 +47,25 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
 
       // const result = await response.json();
       // console.log("Flask response:", result);
+      setLoadingSuccess(true);
+      setTimeout(() => setLoadingSuccess(false), 2000);
     } catch (err) {
       console.error("Error sending data to Flask:", err);
+    } finally {
+      setLoading(false);
     }
   }, [data, id]);
 
   const onClosePhysicalNode = useCallback(
     (nodeId: string) => {
-      const n = getNode(nodeId);
-      if (!n || n.type !== "physicalLayerNode") return;
-
-      const curEdges = getEdges();
-
-      // Physical layer spec from this node
-      const plValue = (n.data as BaseNodeData)?.value as any;
-      const plId: string | undefined = plValue?.physical_layer?.id;
-
-      // All targets currently connected FROM this physical node
-      const targetIds = curEdges
-        .filter((e) => e.source === nodeId)
-        .map((e) => e.target);
-
-      // 1) Update connected view nodes: remove this physical layer ref
-      setNodes((nds) =>
-        nds
-          .map((nn) => {
-            if (nn.type !== "viewNode" || !targetIds.includes(nn.id)) {
-              return nn;
-            }
-
-            const vData = nn.data as ViewNodeData;
-            const existing = vData.physical_layers ?? [];
-
-            const next = plId
-              ? existing.filter((d) => d.id !== plId)
-              : existing;
-
-            return {
-              ...nn,
-              data: {
-                ...nn.data,
-                physical_layers: next.length ? next : undefined,
-              } as ViewNodeData,
-            };
-          })
-          // 2) Remove this physical-layer node itself
-          .filter((nn) => nn.id !== nodeId)
-      );
+      rf.setNodes((nds) => nds.filter((n) => n.id !== nodeId));
 
       // 3) Remove all edges touching this node
       setEdges((eds) =>
         eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
       );
     },
-    [getNode, getEdges, setNodes, setEdges]
+    [rf, setEdges]
   );
 
   return (
@@ -115,15 +84,26 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
             <button
               type="button"
               onClick={onFetch}
-              title="Fetch data"
+              title={loading ? "Fetching..." : "Fetch data"}
               aria-label="Fetch data"
               className="gnode__actionBtn"
+              disabled={loading}
             >
-              <img
-                src={fetchPng}
-                alt="Fetch data"
-                className="gnode__actionIcon"
-              />
+              {loading ? (
+                <span className="gnode__spinner" aria-hidden="true" />
+              ) : loadingSuccess ? (
+                <img
+                  src={checkPng}
+                  alt="Success"
+                  className="gnode__actionIcon"
+                />
+              ) : (
+                <img
+                  src={fetchPng}
+                  alt="Fetch data"
+                  className="gnode__actionIcon"
+                />
+              )}
             </button>
           ),
         }}
