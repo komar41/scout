@@ -200,9 +200,9 @@ def compute_tile(gdf, i, j, zoom, max_height, outputfolder):
 #     filtered = gdf.cx[bb0[0]:bb1[0],bb0[1]:bb1[1]]
     filtered = gdf.loc[gdf.sindex.intersection(bbox.bounds)]
     
-    if len(filtered) > 0:
-        values = elevation(filtered, bbox)
-        create_image(values, i, j, zoom, max_height, outputfolder)
+    # if len(filtered) > 0:
+    values = elevation(filtered, bbox)
+    create_image(values, i, j, zoom, max_height, outputfolder)
 
     # else:
     #     print(f"No data for tile {zoom}/{i}/{j}")
@@ -225,6 +225,10 @@ def convert_raster(input, tag, feature, zoom, output):
     
     outdir = dir / 'raster' / f"{output}"
     outdir.mkdir(parents=True, exist_ok=True)
+
+    if outdir.exists():
+        for file in outdir.iterdir():
+            file.unlink()
 
     if tag == "buildings" and feature == "height":
         outdir.mkdir(parents=True, exist_ok=True)

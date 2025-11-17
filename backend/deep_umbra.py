@@ -455,6 +455,10 @@ def run_shadow_model(input, season, colormap, output):
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    if out_dir.exists():
+        for file in out_dir.iterdir():
+            file.unlink()
+
     for png_path in sorted(in_dir.glob("*.png")):
         stem = png_path.stem  # "16813_24353"
         try:

@@ -173,8 +173,10 @@ export async function renderPhysicalLayersForViews(opts: {
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
 
-        const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}`;
+        const cacheBust = Date.now(); // define once outside the loop
+        const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}?v=${cacheBust}`;
 
+        console.log("raster tile url:", url);
         const bounds = tileBoundsFromXYZ(x, y, z, map);
 
         // include opacity from view definition
@@ -235,7 +237,8 @@ export async function renderPhysicalLayersForViews(opts: {
         maxY = Math.max(maxY, y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
-        const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}`;
+        const cacheBust = Date.now(); // define once outside the loop
+        const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}?v=${cacheBust}`;
 
         // compute bounds for this tile at zoom z
         const bounds = tileBoundsFromXYZ(x, y, z, map); // you implement this
