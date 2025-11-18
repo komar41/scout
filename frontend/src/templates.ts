@@ -112,6 +112,34 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 };
 
 // -------------------------------------------
+// Download data:
+// -------------------------------------------
+
+// from download_data import download_osm_data
+
+// input_filename = "north-america-latest"
+// location = "Los Angeles, USA"
+// output_filename = "la"
+
+// download_osm_data(
+//   input_filename, location, output_filename
+// )
+
+// -------------------------------------------
+// Extract building footprints:
+// -------------------------------------------
+
+// from download_data import extract_buildings
+// extract_buildings("la")
+
+// -------------------------------------------
+// Extract road networks:
+// -------------------------------------------
+
+// from download_data import extract_roads
+// extract_roads("la")
+
+// -------------------------------------------
 // Conversion to raster:
 // -------------------------------------------
 

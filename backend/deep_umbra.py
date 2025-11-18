@@ -26,7 +26,7 @@ def load_input(path, zoom, i, j):
 
     # Read and decode an image file to a uint8 tensor
     filename = tf.strings.format(
-        '{}/{}_{}.png', (path, i, j))
+        '{}/{}_{}_.png', (path, i, j))
     filename = tf.strings.regex_replace(filename, '\"', "")
     input_image = tf.io.read_file(filename)
     input_image = tf.io.decode_png(input_image)[:, :, 0]
@@ -41,7 +41,8 @@ def load_input_grid(path, date, zoom, i, j):
 
     for x in range(-1, 2):
         for y in range(-1, 2):
-            filepath = '%s/%d_%d.png' % (path, i+y, j+x)
+            filepath = '%s/%d_%d_.png' % (path, i+y, j+x)
+            print(f"Loading file: {filepath}")
             if os.path.isfile(filepath):
                 iinput = load_input(path, zoom, i+y, j+x)
                 indices = [(xx, yy) for xx in range(256+256*x, 256+256*(x+1))
@@ -466,7 +467,7 @@ def run_shadow_model(input, season, colormap, output):
             I = int(I_str)
             J = int(J_str)
         except ValueError:
-            print(f"Skipping invalid name: {png_path.name}")
+            # print(f"Skipping invalid name: {png_path.name}")
             continue
 
         print(f"[Predicting] I={I}, J={J}")

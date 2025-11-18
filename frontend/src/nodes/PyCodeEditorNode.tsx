@@ -50,6 +50,13 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
 
     try {
       setRunning(true);
+
+      // Update the output panel
+      setOutput({
+        stdout: "",
+        stderr: "",
+      });
+
       const res = await fetch("http://localhost:5000/api/run-python", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

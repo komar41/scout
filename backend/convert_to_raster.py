@@ -182,10 +182,10 @@ def create_image(values, i, j, zoom, max_height, outputfolder):
     filename = '%s/%d_%d.png'%(outputfolder,i,j)
 
     values = 255.0 * (values / max_height)
-    success_ = cv2.imwrite(filename, values)
+    success_ = cv2.imwrite(filename_, values)
 
     arr = 255 - values
-    success = cv2.imwrite(filename_, arr)
+    success = cv2.imwrite(filename, arr)
 
     if not success or not success_:
         raise Exception("Could not write image")

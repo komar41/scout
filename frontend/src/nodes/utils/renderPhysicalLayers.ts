@@ -133,15 +133,15 @@ export async function renderPhysicalLayersForViews(opts: {
   }
   rasterOverlays.clear();
 
+  clearAllSvgLayers();
+
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
   const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
 
+  console.log(physicalViews, thematicViews);
   if (!physicalViews.length && !thematicViews.length) {
-    clearAllSvgLayers();
     return;
   }
-
-  clearAllSvgLayers();
 
   let unionBounds: L.LatLngBounds | null = null;
   const path = makeLeafletPath(map);
@@ -155,6 +155,7 @@ export async function renderPhysicalLayersForViews(opts: {
       const tiles = await fetch(
         `http://127.0.0.1:5000/api/list-rasters/${thId}`
       ).then((r) => r.json());
+      const cacheBust = Date.now(); // define once outside the loop
 
       let minX = Infinity,
         minY = Infinity,
@@ -162,6 +163,7 @@ export async function renderPhysicalLayersForViews(opts: {
         maxY = -Infinity;
 
       for (const name of tiles) {
+        if (name.endsWith("_.png")) continue;
         const [xStr, yStr] = name.replace(".png", "").split("_");
         const x = Number(xStr);
         const y = Number(yStr);
@@ -173,7 +175,6 @@ export async function renderPhysicalLayersForViews(opts: {
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
 
-        const cacheBust = Date.now(); // define once outside the loop
         const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}?v=${cacheBust}`;
 
         console.log("raster tile url:", url);
@@ -217,14 +218,14 @@ export async function renderPhysicalLayersForViews(opts: {
         `http://127.0.0.1:5000/api/list-rasters/${plId}`
       ).then((r) => r.json()); // [ "16812_24353.png", ... ]
 
+      const cacheBust = Date.now();
       let minX = Infinity,
         minY = Infinity,
         maxX = -Infinity,
         maxY = -Infinity;
 
-      const filtered = tiles.filter((n) => n.endsWith("_.png"));
-
-      for (const name of filtered) {
+      for (const name of tiles) {
+        if (name.endsWith("_.png")) continue;
         const [xStr, yStr] = name.replace(".png", "").split("_");
         const x = Number(xStr);
         const y = Number(yStr);
@@ -237,8 +238,8 @@ export async function renderPhysicalLayersForViews(opts: {
         maxY = Math.max(maxY, y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
-        const cacheBust = Date.now(); // define once outside the loop
         const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}?v=${cacheBust}`;
+        console.log("raster tile url:", url);
 
         // compute bounds for this tile at zoom z
         const bounds = tileBoundsFromXYZ(x, y, z, map); // you implement this

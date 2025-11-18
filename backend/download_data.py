@@ -21,9 +21,17 @@ def download_osm_data(input_filename, location, output_filename):
     location = geolocator.geocode(location).raw
 
     south, north, west, east = map(float, location['boundingbox'])
-    bbox = f"{south},{west},{east},{north}"
+    bbox = f"{west},{south},{east},{north}"
 
-    subprocess.run(["osmium", "extract", "-b", bbox, "-o", filename, "--overwrite", input])
+    print("Downloading OSM data for %s with bbox %s" % (location['display_name'], bbox))
+
+    subprocess.run([
+        "osmium", "extract",
+        "-b", bbox,
+        "-o", filename,
+        "--overwrite",
+        input
+    ])
 
     print("Download complete. Data saved to %s" % (filename))
 
@@ -75,6 +83,7 @@ def extract_roads(output_filename):
     edges = ox.convert.graph_to_gdfs(G, nodes=False, edges=True)
     edges = edges[['length', 'speed_kph', 'travel_time', 'geometry', 'width', 'name']]
 
+    os.makedirs('data/%s' % (output_filename), exist_ok=True)
     edges.to_feather('data/%s/roads.feather' % (output_filename), compression='lz4')
 
     with gzip.open("./data/%s/roads.pkl.gz" % output_filename, "wb") as f:
@@ -196,6 +205,8 @@ def extract_buildings(output_filename):
     handler.apply_file(pbf_path, locations=True)
 
     gdf = handler.get_gdf()
+    # Ensure directory exists
+    os.makedirs('data/%s' % (output_filename), exist_ok=True)
     gdf.to_feather('data/%s/buildings.feather' % (output_filename), compression='lz4')
 
     print("Saved building data to ./data/%s/buildings.feather" % (output_filename))

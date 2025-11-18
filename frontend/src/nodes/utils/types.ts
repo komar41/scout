@@ -26,11 +26,10 @@ export type ParsedLayer = {
 export type ParsedView = {
   physicalLayerRef?: string;
   thematicLayerRef?: string;
-  type: "vector" | "raster";
+  style?: Record<string, any>;
   zoom_pan?: boolean;
-  colormap?: string;
   zoom_level?: number;
-  layers: ParsedLayer[];
+  layers?: ParsedLayer[];
 };
 
 export type InteractionDef = {

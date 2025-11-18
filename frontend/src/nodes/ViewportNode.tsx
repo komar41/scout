@@ -145,9 +145,7 @@ const ViewportNode = memo(function ViewportNode({
       const map = leafletRef.current;
 
       // If map not ready OR no spec -> clear drawings and bail
-      if (!map || !nodeData?.view?.length) {
-        // || !nodeData.physical_layers.. For now skipping it...
-        if (map) clearAllSvgLayers();
+      if (!map) {
         return;
       }
 
@@ -157,12 +155,6 @@ const ViewportNode = memo(function ViewportNode({
       });
 
       // const physicalLayers = nodeData.physical_layers;
-
-      if (!parsed || !parsed.length) {
-        clearAllSvgLayers();
-
-        return;
-      }
 
       await renderPhysicalLayersForViews({
         id,
@@ -304,6 +296,8 @@ const ViewportNode = memo(function ViewportNode({
   }, [data, loadFromView]);
 
   const onClose = useCallback(() => {
+    loadFromView(undefined); // clear before closing
+
     if (data?.onClose) return data.onClose(id);
     rf.setNodes((nds) => nds.filter((n) => n.id !== id));
 
