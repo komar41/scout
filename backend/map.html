@@ -28,7 +28,9 @@
   </head>
   <body>
     <h1>Dynamic Route Loader</h1>
-    <div id="info">Click on the map to set Origin (1st click) and Destination (2nd click)</div>
+    <div id="info">
+      Click on the map to set Origin (1st click) and Destination (2nd click)
+    </div>
     <button id="loadRouteBtn">Load Calculated Route</button>
     <button id="clearMarkersBtn">Clear Markers</button>
     <div id="map"></div>
@@ -36,7 +38,7 @@
     <script>
       var map = L.map("map").setView([41.88, -87.64], 14);
       let currentRouteLayer = null;
-      
+
       // Store markers
       let originMarker = null;
       let destinationMarker = null;
@@ -56,58 +58,83 @@
           // First click - set origin
           originMarker = L.marker(e.latlng, {
             icon: L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+              iconUrl:
+                "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+              shadowUrl:
+                "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
               iconSize: [25, 41],
               iconAnchor: [12, 41],
               popupAnchor: [1, -34],
-              shadowSize: [41, 41]
-            })
-          }).addTo(map).bindPopup("<b>Origin</b>").openPopup();
-          
-          document.getElementById("info").textContent = 
-            `Origin: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)} - Click again to set Destination`;
+              shadowSize: [41, 41],
+            }),
+          })
+            .addTo(map)
+            .bindPopup("<b>Origin</b>")
+            .openPopup();
+
+          document.getElementById(
+            "info"
+          ).textContent = `Origin: ${e.latlng.lat.toFixed(
+            6
+          )}, ${e.latlng.lng.toFixed(6)} - Click again to set Destination`;
         } else if (!destinationMarker) {
           // Second click - set destination
           destinationMarker = L.marker(e.latlng, {
             icon: L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+              iconUrl:
+                "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+              shadowUrl:
+                "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
               iconSize: [25, 41],
               iconAnchor: [12, 41],
               popupAnchor: [1, -34],
-              shadowSize: [41, 41]
-            })
-          }).addTo(map).bindPopup("<b>Destination</b>").openPopup();
-          
-          document.getElementById("info").textContent = 
-            `Origin: ${originMarker.getLatLng().lat.toFixed(6)}, ${originMarker.getLatLng().lng.toFixed(6)} | ` +
-            `Destination: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)} - Ready to load route!`;
+              shadowSize: [41, 41],
+            }),
+          })
+            .addTo(map)
+            .bindPopup("<b>Destination</b>")
+            .openPopup();
+
+          document.getElementById("info").textContent =
+            `Origin: ${originMarker.getLatLng().lat.toFixed(6)}, ${originMarker
+              .getLatLng()
+              .lng.toFixed(6)} | ` +
+            `Destination: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(
+              6
+            )} - Ready to load route!`;
         } else {
           // Already have both markers - reset and start over
           map.removeLayer(originMarker);
           map.removeLayer(destinationMarker);
           originMarker = null;
           destinationMarker = null;
-          
+
           // Set new origin
           originMarker = L.marker(e.latlng, {
             icon: L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+              iconUrl:
+                "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+              shadowUrl:
+                "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
               iconSize: [25, 41],
               iconAnchor: [12, 41],
               popupAnchor: [1, -34],
-              shadowSize: [41, 41]
-            })
-          }).addTo(map).bindPopup("<b>Origin</b>").openPopup();
-          
-          document.getElementById("info").textContent = 
-            `Origin: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)} - Click again to set Destination`;
+              shadowSize: [41, 41],
+            }),
+          })
+            .addTo(map)
+            .bindPopup("<b>Origin</b>")
+            .openPopup();
+
+          document.getElementById(
+            "info"
+          ).textContent = `Origin: ${e.latlng.lat.toFixed(
+            6
+          )}, ${e.latlng.lng.toFixed(6)} - Click again to set Destination`;
         }
       }
 
-      map.on('click', onMapClick);
+      map.on("click", onMapClick);
 
       // Clear markers button
       clearMarkersButton.addEventListener("click", () => {
@@ -119,14 +146,16 @@
           map.removeLayer(destinationMarker);
           destinationMarker = null;
         }
-        document.getElementById("info").textContent = 
+        document.getElementById("info").textContent =
           "Click on the map to set Origin (1st click) and Destination (2nd click)";
       });
 
       loadRouteButton.addEventListener("click", () => {
         // Check if both markers are set
         if (!originMarker || !destinationMarker) {
-          alert("Please set both Origin and Destination markers on the map first!");
+          alert(
+            "Please set both Origin and Destination markers on the map first!"
+          );
           return;
         }
 
@@ -138,10 +167,10 @@
           origin: [origin.lat, origin.lng],
           destination: [destination.lat, destination.lng],
           bbox: [41.895, 41.875, -87.62, -87.645],
-          map_view_mode: "Optimized",
-          paths: 1,
-          weather: ["rain"],
-          weights: [0.85834],
+          map_view_mode: "Variable",
+          paths: 3,
+          weather: ["rain", "heat"],
+          weights: [0.85834, 0.5],
           time: 17,
         };
 
@@ -176,7 +205,6 @@
       // Plot multiple routes (each route has coordinates array)
       // ---------------------------------------------------------
       function plotRoutes(routes) {
-
         if (currentRouteLayer) {
           map.removeLayer(currentRouteLayer);
         }
@@ -218,7 +246,7 @@
           wind: "purple",
           humidity: "green",
           quickest_path: "black",
-          total_weight: "orange"
+          total_weight: "orange",
         };
         return colors[type] || "gray";
       }

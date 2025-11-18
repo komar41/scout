@@ -28,8 +28,7 @@ def calculate_weather_route(datafile,
                             weather_weights, # Corresponding weights for each weather condition (Should be same length as weather_conditions and in the same order)
                             time):
     BASE_PATH = "./data/weather/"
-    
-    
+
     ymax = bbox[0] 
     ymin = bbox[1]
     xmax = bbox[2]
@@ -51,7 +50,7 @@ def calculate_weather_route(datafile,
     rain_data, rain_lats, rain_lons, rain_ds = data_loader.load_rain_data(
         rain_data_path= BASE_PATH + "RAIN.nc"
     )
-        
+         
     heat_data, heat_lats, heat_lons, heat_ds = data_loader.load_heat_index_data(
         heat_index_path= BASE_PATH + "T2.nc"
     )
@@ -73,16 +72,11 @@ def calculate_weather_route(datafile,
     route = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
     trip_times_seconds = calculate_isochrones(G, orig_node, route)
 
-    if map_view_mode == "Optimized":
-        rain_weight = 0.85834
-        heat_weight = 0.02850
-        humidity_weight = 0.09648
-        wind_weight = 0.01657
-    else:
-        rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0.01
-        heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0.01
-        wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0.01
-        humidity_weight = weather_weights[weather_conditions.index('humidity')] if 'humidity' in weather_conditions else 0.01
+    
+    rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0.01
+    heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0.01
+    wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0.01
+    humidity_weight = weather_weights[weather_conditions.index('humidity')] if 'humidity' in weather_conditions else 0.01
 
     print("Weather weights: ", rain_weight, heat_weight, wind_weight, humidity_weight)
 
@@ -108,6 +102,7 @@ def calculate_weather_route(datafile,
     
     print(f"Calculating routes for map view mode: {map_view_mode}")
     
+    # Single map with single route!! 
     if map_view_mode == "Optimized":
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         route_total = nx.shortest_path(G, orig_node, dest_node, weight="total_weight")
@@ -178,7 +173,7 @@ def calculate_weather_route(datafile,
             'weight_type': 'fastest',
         })
         
-        
+    # instead we will create linestrings and store to geojson. Then fetch it on frontend whenever needed.
     route_coords = []
     index = 0
     for route in routes_data:
