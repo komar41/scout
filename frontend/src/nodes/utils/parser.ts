@@ -8,9 +8,10 @@ export function parseView(raw: any): ParsedView[] {
     const base: ParsedView = {
       physicalLayerRef: v.physical_layer?.ref,
       thematicLayerRef: v.thematic_layer?.ref,
+      opacity: v.style?.opacity ?? 1,
       type: v.type,
-      projection: v.projection,
       zoom_pan: v.zoom_pan,
+      zoom_level: v.zoom_level,
       layers: [],
     };
 

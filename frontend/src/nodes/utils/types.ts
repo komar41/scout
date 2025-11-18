@@ -1,6 +1,7 @@
 // types.ts
 export type PhysicalLayerDef = {
   id: string;
+  type: "raster" | "vector";
   datafile: string;
   region_of_interest: { type: "bbox" | "geojson"; value: number[] | string };
   layers: { tag: string; features: string[] }[];
@@ -10,7 +11,6 @@ export type ViewDef = {
   physical_layer?: { ref: string };
   thematic_layer?: { ref: string };
   type: string;
-  projection?: string;
   zoom_pan?: boolean;
   layers?: { tag: string; style: Record<string, any> }[];
   style?: Record<string, any>;
@@ -26,10 +26,10 @@ export type ParsedLayer = {
 export type ParsedView = {
   physicalLayerRef?: string;
   thematicLayerRef?: string;
-  type: "vector" | "raster";
-  projection?: string;
+  style?: Record<string, any>;
   zoom_pan?: boolean;
-  layers: ParsedLayer[];
+  zoom_level?: number;
+  layers?: ParsedLayer[];
 };
 
 export type InteractionDef = {

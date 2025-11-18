@@ -10,17 +10,26 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 from flask import send_from_directory, abort
 from convert_to_raster import convert_raster
+from deep_umbra import run_shadow_model
+from download_data import download_osm_data, extract_roads, extract_buildings
 import osmnx as ox
 import pickle, gzip
 
 from weather_routing import *
+import subprocess
+import tempfile
+
 
 app = Flask(__name__)
 CORS(app)
 
 DATA_DIR = Path("data")        
 OUT_DIR  = Path("data/served")
+vector_subdir = Path(OUT_DIR / "vector")
+raster_subdir = Path(OUT_DIR / "raster")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+vector_subdir.mkdir(parents=True, exist_ok=True)
+raster_subdir.mkdir(parents=True, exist_ok=True)
 
 # Remove cached outputs on exit
 def cleanup_served():
@@ -94,15 +103,68 @@ def select_features(gdf: gpd.GeoDataFrame, features: list[str]) -> gpd.GeoDataFr
     
     return gdf[cols]
 
-@app.get("/generated/<path:filename>")
-def serve_generated(filename: str):
-    # Only allow .geojson files from OUT_DIR
+@app.get("/api/list-rasters/<plId>")
+def list_rasters(plId: str):
+    """
+    Return a JSON list of PNG raster tiles inside:
+    data/served/raster/<plId>/
+    """
+    # Resolve folder safely
+    folder = raster_subdir / plId
+
+    # Security: ensure path is inside raster_subdir
+    try:
+        folder.resolve().relative_to(raster_subdir.resolve())
+    except Exception:
+        return jsonify({"error": "Invalid raster folder"}), 403
+
+    # Check folder exists
+    if not folder.exists() or not folder.is_dir():
+        return jsonify([]), 200   # return empty list
+
+    # Collect *.png files
+    files = [
+        f.name
+        for f in folder.iterdir()
+        if f.is_file() and f.suffix.lower() == ".png"
+    ]
+
+    return jsonify(files), 200
+
+@app.get("/generated/raster/<path:filename>")
+def serve_raster(filename: str):
+    # works: http://127.0.0.1:5000/generated/raster/rasters-baselayer-0/16812_24353.png
+    if not filename.lower().endswith(".png"):
+        abort(404)
+
+    # Resolve safe absolute path (prevents directory traversal)
+    full_path = raster_subdir / filename
+    try:
+        full_path.resolve().relative_to(raster_subdir.resolve())
+    except Exception:
+        abort(403)  # Forbidden
+
+    # parent directory + file name
+    directory = full_path.parent
+    file = full_path.name
+
+    return send_from_directory(
+        directory,
+        file,
+        mimetype="image/png",
+        conditional=True
+    )
+
+@app.get("/generated/vector/<path:filename>")
+def serve_vector(filename: str):
     if not filename.lower().endswith(".geojson"):
         abort(404)
+
     return send_from_directory(
-        OUT_DIR, filename,
-        mimetype="application/geo+json",  # fine if omitted; browsers still parse
-        conditional=True                  # enables ETag/If-None-Match
+        vector_subdir,
+        filename,
+        mimetype="application/geo+json",
+        conditional=True
     )
 
 @app.post('/api/ingest-physical-layer')
@@ -132,7 +194,7 @@ def ingest_physical_layer():
             gdf_cut = crop_gdf(gdf, roi)
             gdf_out = select_features(gdf_cut, features)
 
-            out_name = f"{pl_id}_{tag}.geojson"
+            out_name = f"vector/{pl_id}_{tag}.geojson"
             out_path = OUT_DIR / out_name
             
             gdf_out.to_file(out_path, driver="GeoJSON")
@@ -150,12 +212,12 @@ def ingest_physical_layer():
                         (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
                     )
                     node_ids = nodes.loc[mask].index
-                    G_crop = G.subgraph(node_ids)
+                    G_crop = G.subgraph(node_ids).copy()
 
-                    with gzip.open("%s/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
+                    with gzip.open("%s/vector/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
                         pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-                    print(f"Saved cropped road graph to: {OUT_DIR}/{pl_id}_roads.pkl.gz")
+                    print(f"Saved cropped road graph to: {OUT_DIR}/vector/{pl_id}_roads.pkl.gz")
 
         except Exception as e:
             error_msg = f"[ERROR] Layer {pl_id}:{tag} → {type(e).__name__}: {e}"
@@ -175,12 +237,11 @@ def ingest_physical_layer():
 @app.route("/api/update-physical-layer", methods=["POST"])
 def update_physical_layer():
     data = request.get_json()
-    print(data)
     pl_id = data["physicalLayerRef"]
     tag = data["tag"]
     geojson = data["geojson"]
 
-    filename = f"{pl_id}_{tag}.geojson"
+    filename = f"vector/{pl_id}_{tag}.geojson"
     filepath = OUT_DIR / filename
 
     with open(filepath, "w") as f:
@@ -190,14 +251,15 @@ def update_physical_layer():
 
 @app.route("/api/convert-to-raster", methods=["POST"])
 def convert_to_raster():
+    # Using code node instead of using this api from grammar!
     data = request.get_json()
-    pl_id = data["physicalLayerRef"]
-    tag = data["tag"]
-    feature = data["feature"]
+    pl_id = data["physical_layer"]["ref"]
+    id = data["id"]
+    tag = data["layer"]["tag"]
+    feature = data["layer"]["feature"]
     zoom = data["zoom"]
-    dir = OUT_DIR
 
-    # convert_raster(dir, pl_id, tag, feature, zoom)
+    convert_raster(pl_id, tag, feature, zoom, id)
 
     return jsonify({"status": "success"}), 200
 
@@ -230,11 +292,80 @@ def calculate_weather_aware_route():
 
     return jsonify({"route_coords": route_coords}), 200
 
+@app.post("/api/run-python")
+def run_python():
+    payload = request.get_json() or {}
+    code = payload.get("code", "")
+
+    tmp_filename = None
+    try:
+        # Create a temp file to run code
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
+            tmp.write(code)
+            tmp_filename = tmp.name
+
+        project_dir = Path(__file__).parent
+        python_exe = project_dir / "envs" / ("python.exe" if os.name == "nt" else "bin/python")
+
+        if not python_exe.exists():
+            return jsonify({
+                "stdout": "",
+                "stderr": f"Python interpreter not found at: {python_exe}",
+                "returncode": -1,
+            }), 200
+        
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(project_dir) + os.pathsep + env.get("PYTHONPATH", "")
+
+        print("Using interpreter:", python_exe)
+
+        # 2. Run subprocess (wrapped in try/except)
+        try:
+            result = subprocess.run(
+                [str(python_exe), tmp_filename],
+                capture_output=True,
+                text=True,
+                timeout=3600,
+                cwd=str(project_dir),
+                env=env
+            )
+
+            return jsonify({
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }), 200
+
+        except subprocess.TimeoutExpired:
+            return jsonify({
+                "stdout": "",
+                "stderr": "Execution timed out.",
+                "returncode": -1
+            }), 200
+
+        except Exception as e:
+            return jsonify({
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }), 200
+        
+    finally:
+        # 3. Cleanup temp file
+        if tmp_filename and os.path.exists(tmp_filename):
+            try:
+                os.remove(tmp_filename)
+            except OSError:
+                pass
+
+
 if __name__ == '__main__':
     # remove old served before starting
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR, ignore_errors=True)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    vector_subdir.mkdir(parents=True, exist_ok=True)
+    raster_subdir.mkdir(parents=True, exist_ok=True)
 
     app.run(host='0.0.0.0', port=5000, debug=True)

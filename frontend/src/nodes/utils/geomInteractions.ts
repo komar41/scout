@@ -83,7 +83,7 @@ export function applyGeometryInteractions(
   ctx: InteractionContext & { featureCollection?: any },
   baseStrokeWidth: number
 ) {
-  console.log(sel, specs, ctx, baseStrokeWidth);
+  // console.log(sel, specs, ctx, baseStrokeWidth);
   if (!specs || specs.length === 0) {
     specs = [{ interaction: "hover-highlight", action: "highlight" }];
   }

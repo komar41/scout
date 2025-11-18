@@ -90,19 +90,6 @@ export default function JsonCodeEditor({
     }
   };
 
-  // Format button. Will add later probably..
-  // const formatPretty = () => {
-  //   try {
-  //     const parsed = JSON.parse(text);
-  //     const pretty = JSON.stringify(parsed, null, 2);
-  //     setText(pretty);
-  //     onChange?.(parsed);
-  //     lastApplied.current = JSON.stringify(parsed);
-  //   } catch {
-  //     // invalid JSON: ignore
-  //   }
-  // };
-
   return (
     <div
       className="nodrag nowheel"
@@ -152,33 +139,6 @@ export default function JsonCodeEditor({
           }}
         />
       </div>
-
-      {/* Format button row! Will add later */}
-      {/* <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          padding: "6px 8px",
-          borderTop: "1px solid #eee",
-          background: "#fafafa",
-        }}
-      >
-        <button
-          type="button"
-          onClick={formatPretty}
-          style={{
-            fontSize: 13,
-            padding: "5px 10px",
-            border: "1px solid #e5e7eb",
-            borderRadius: 6,
-            background: "#6a51a3",
-            cursor: "pointer",
-            color: "white",
-          }}
-        >
-          Format
-        </button>
-      </div> */}
     </div>
   );
 }

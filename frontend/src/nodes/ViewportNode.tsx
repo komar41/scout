@@ -1,22 +1,23 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
-import L, { geoJson } from "leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
-import persistPng from "../assets/fetch.png";
+import persistPng from "../assets/update-data.png";
+import checkPng from "../assets/check-mark.png";
 import * as d3 from "d3";
-import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
+import { ViewDef, InteractionDef } from "./utils/types";
 import { parseInteraction, parseView } from "./utils/parser";
 import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
+// import { TransformationNodeData } from "./TransformationNode";
 
 export type ViewportNodeData = {
   center?: [number, number];
   zoom?: number;
   onClose?: (id: string) => void;
-  onRun?: (id: string) => void;
-  physical_layers?: PhysicalLayerDef[];
+  onRun?: (srcId: string, trgId?: string) => void;
   view?: ViewDef[];
   interactions?: InteractionDef[];
 };
@@ -26,8 +27,11 @@ export type ViewportNode = Node<ViewportNodeData, "viewportNode">;
 const ViewportNode = memo(function ViewportNode({
   id,
   data,
-  selected,
 }: NodeProps<ViewportNode>) {
+  const [persisting, setPersisting] = useState(false);
+  const [persistSuccess, setPersistSuccess] = useState(false);
+
+  const { getEdges, setEdges } = useReactFlow();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
@@ -64,7 +68,7 @@ const ViewportNode = memo(function ViewportNode({
     return true;
   }, []);
 
-  const onPersist = useCallback(() => {
+  const onPersist = useCallback(async () => {
     const entries = Object.values(pendingRef.current) as {
       plId: string;
       tag: string;
@@ -73,21 +77,30 @@ const ViewportNode = memo(function ViewportNode({
 
     if (!entries.length) return;
 
-    console.log(entries, "<<< persisting edits");
+    setPersisting(true);
+    setPersistSuccess(false);
 
-    entries.forEach(({ plId, tag, geojson }) => {
-      fetch("http://127.0.0.1:5000/api/update-physical-layer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          physicalLayerRef: plId,
-          tag,
-          geojson,
-        }),
-      }).catch(() => {
-        // optional: handle error if you want feedback
-      });
-    });
+    try {
+      const tasks = entries.map(({ plId, tag, geojson }) =>
+        fetch("http://127.0.0.1:5000/api/update-physical-layer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            physicalLayerRef: plId,
+            tag,
+            geojson,
+          }),
+        })
+      );
+
+      await Promise.allSettled(tasks);
+      pendingRef.current = {};
+
+      setPersistSuccess(true);
+      setTimeout(() => setPersistSuccess(false), 2000);
+    } finally {
+      setPersisting(false);
+    }
 
     // clear pending once sent
     pendingRef.current = {};
@@ -132,8 +145,7 @@ const ViewportNode = memo(function ViewportNode({
       const map = leafletRef.current;
 
       // If map not ready OR no spec -> clear drawings and bail
-      if (!map || !nodeData?.view?.length || !nodeData.physical_layers) {
-        if (map) clearAllSvgLayers();
+      if (!map) {
         return;
       }
 
@@ -142,16 +154,14 @@ const ViewportNode = memo(function ViewportNode({
         interaction: nodeData.interactions,
       });
 
-      if (!parsed || !parsed.length) {
-        clearAllSvgLayers();
-        return;
-      }
+      // const physicalLayers = nodeData.physical_layers;
 
       await renderPhysicalLayersForViews({
         id,
         map,
         parsedViews: parsed,
         parsedInteractions: parsedInteractions,
+        // physicalLayers,
         clearAllSvgLayers,
         makeLeafletPath,
         getOrCreateTagGroup,
@@ -186,6 +196,8 @@ const ViewportNode = memo(function ViewportNode({
       attributionControl: false,
       preferCanvas: true,
     });
+
+    setTimeout(() => map.invalidateSize(), 0);
 
     const center: [number, number] = data?.center ?? [41.881, -87.63];
     const zoom = data?.zoom ?? 14;
@@ -284,9 +296,23 @@ const ViewportNode = memo(function ViewportNode({
   }, [data, loadFromView]);
 
   const onClose = useCallback(() => {
+    loadFromView(undefined); // clear before closing
+
     if (data?.onClose) return data.onClose(id);
     rf.setNodes((nds) => nds.filter((n) => n.id !== id));
-  }, [data, id, rf]);
+
+    const curEdges = getEdges();
+
+    // All targets currently connected FROM this view node
+    const targetIds = curEdges
+      .filter((e) => e.source === id)
+      .map((e) => e.target);
+
+    // Since we are not using the transformation node anymore, this logic here stays empty for now!!
+
+    // 3) Remove all edges touching the closed view node
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+  }, [data, id, rf, getEdges, setEdges]);
 
   const onRun = useCallback(() => {
     if (data?.onRun) return data.onRun(id);
@@ -297,7 +323,7 @@ const ViewportNode = memo(function ViewportNode({
 
   return (
     <div className="vpnode">
-      <NodeResizer isVisible={!!selected} />
+      <NodeResizer />
 
       <div className="vpnode__header">
         <div className="vpnode__title">Viewport</div>
@@ -325,11 +351,11 @@ const ViewportNode = memo(function ViewportNode({
         <button
           type="button"
           onClick={onRun}
-          title="Re-run"
-          aria-label="Re-run"
+          title="update"
+          aria-label="update"
           className="vpnode__actionBtn"
         >
-          <img src={restartPng} alt="Re-run" className="vpnode__actionIcon" />
+          <img src={restartPng} alt="update" className="vpnode__actionIcon" />
         </button>
         <button
           type="button"
@@ -337,33 +363,40 @@ const ViewportNode = memo(function ViewportNode({
           title="Save edits"
           aria-label="Save edits"
           className="vpnode__actionBtn"
+          disabled={persisting}
         >
-          <img
-            src={persistPng}
-            alt="Save edits"
-            className="vpnode__actionIcon"
-          />
+          {persisting ? (
+            <span className="vpnode__spinner" />
+          ) : persistSuccess ? (
+            <img src={checkPng} alt="Success" className="vpnode__actionIcon" />
+          ) : (
+            <img
+              src={persistPng}
+              alt="Save edits"
+              className="vpnode__actionIcon"
+            />
+          )}
         </button>
       </div>
 
       <Handle
         type="target"
         position={Position.Left}
-        id="left-handle"
+        id="viewport-in-1"
         className="vpnode__handle vpnode__handle--left"
       />
 
       <Handle
         type="source"
         position={Position.Right}
-        id="right-handle"
+        id="viewport-out"
         className="vpnode__handle vpnode__handle--right"
       />
 
       <Handle
         type="target"
         position={Position.Bottom}
-        id="top-handle"
+        id="viewport-in-2"
         className="vpnode__handle vpnode__handle--bottom"
       />
     </div>

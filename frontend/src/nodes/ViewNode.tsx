@@ -3,14 +3,11 @@ import type { NodeProps, Node } from "@xyflow/react";
 import { useReactFlow, Handle, Position } from "@xyflow/react";
 import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/view.json";
-import { PhysicalLayerDef } from "./utils/types";
 import type { ViewportNodeData } from "./ViewportNode";
 
 import "./BaseGrammarNode.css";
 
-export type ViewNodeData = BaseNodeData & {
-  physical_layers?: PhysicalLayerDef[];
-};
+export type ViewNodeData = BaseNodeData;
 
 export type ViewNode = Node<ViewNodeData, "viewNode">;
 
@@ -30,9 +27,7 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
         .filter((e) => e.source === nodeId)
         .map((e) => e.target);
 
-      console.log(targetIds);
-
-      // 1) Clear physical_layers and view on connected viewport nodes
+      // 1) Clear view on connected viewport nodes
       setNodes((nds) =>
         nds
           .map((nn) => {
@@ -42,11 +37,9 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
             const vd = nn.data as ViewportNodeData;
             const nextData: ViewportNodeData = {
               ...vd,
-              physical_layers: undefined,
               view: undefined,
             };
 
-            console.log(nextData);
             return { ...nn, data: nextData };
           })
           // 2) Remove this view node itself
@@ -71,7 +64,7 @@ const ViewNode = memo(function ViewNode(props: NodeProps<ViewNode>) {
           title: "Grammar • view",
           schema,
           pickInner: (v) => (v as any)?.view,
-          onClose: onCloseViewNode, // 👈 pass the handler here
+          onClose: onCloseViewNode,
         }}
       />
       <Handle

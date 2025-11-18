@@ -11,19 +11,30 @@ import ViewportNode, {
   ViewportNodeData,
 } from "./ViewportNode";
 
+import PyCodeEditorNode, {
+  PyCodeEditorNode as PyCodeEditorNodeType,
+  PyCodeEditorNodeData,
+} from "./PyCodeEditorNode";
+
 import InteractionNode, {
   InteractionNode as InteractionNodeType,
   InteractionNodeData,
 } from "./InteractionNode";
+
+import TransformationNode, {
+  TransformationNode as TransformationNodeType,
+  TransformationNodeData,
+} from "./TransformationNode";
 
 // register all implemented node types
 export const nodeTypes = {
   physicalLayerNode: PhysicalLayerNode,
   viewNode: ViewNode,
   viewportNode: ViewportNode,
+  pyCodeEditorNode: PyCodeEditorNode,
   interactionNode: InteractionNode,
   // joinNode: JoinNode,
-  // transformationNode: TransformationNode,
+  transformationNode: TransformationNode,
   // choiceNode: ChoiceNode,
 } as const;
 
@@ -32,10 +43,14 @@ export type AnyNode =
   | PhysicalLayerNodeType
   | ViewNodeType
   | ViewportNodeType
-  | InteractionNodeType;
+  | InteractionNodeType
+  | TransformationNodeType
+  | PyCodeEditorNodeType;
 
 export type AnyNodeData =
   | BaseNodeData
   | ViewNodeData
   | ViewportNodeData
-  | InteractionNodeData;
+  | InteractionNodeData
+  | TransformationNodeData
+  | PyCodeEditorNodeData;

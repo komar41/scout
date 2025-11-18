@@ -7,10 +7,23 @@ import type { InteractionSpec } from "./geomInteractions";
 import type { ParsedView, ParsedInteraction } from "./types";
 
 type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
-
+const rasterOverlays = new Set<L.ImageOverlay>();
 /**
  * Map ParsedInteraction -> InteractionSpec for a given layer.
  */
+
+function tileBoundsFromXYZ(x: number, y: number, z: number, map: L.Map) {
+  const tileSize = 256;
+
+  const nwPoint = L.point(x * tileSize, y * tileSize);
+  const sePoint = L.point((x + 1) * tileSize, (y + 1) * tileSize);
+
+  const nwLatLng = map.unproject(nwPoint, z);
+  const seLatLng = map.unproject(sePoint, z);
+
+  return L.latLngBounds(nwLatLng, seLatLng);
+}
+
 function buildInteractionSpecsForLayer(opts: {
   interactions: ParsedInteraction[];
   plId: string;
@@ -90,6 +103,7 @@ export async function renderPhysicalLayersForViews(opts: {
   map: L.Map;
   parsedViews: ParsedView[];
   parsedInteractions: ParsedInteraction[];
+  // physicalLayers: PhysicalLayerDef[];
   clearAllSvgLayers: () => void;
   makeLeafletPath: (map: L.Map) => d3.GeoPath<any, d3.GeoPermissibleObjects>;
   getOrCreateTagGroup: (tag: string) => TagGroup;
@@ -105,6 +119,7 @@ export async function renderPhysicalLayersForViews(opts: {
     map,
     parsedViews,
     parsedInteractions,
+    // physicalLayers,
     clearAllSvgLayers,
     makeLeafletPath,
     getOrCreateTagGroup,
@@ -112,21 +127,168 @@ export async function renderPhysicalLayersForViews(opts: {
     shouldHandleClick,
   } = opts;
 
-  const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
-
-  if (!physicalViews.length) {
-    clearAllSvgLayers();
-    return;
+  // Remove old raster overlays from previous renders
+  for (const overlay of rasterOverlays) {
+    map.removeLayer(overlay);
   }
+  rasterOverlays.clear();
 
   clearAllSvgLayers();
+
+  const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
+  const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
+
+  console.log(physicalViews, thematicViews);
+  if (!physicalViews.length && !thematicViews.length) {
+    return;
+  }
 
   let unionBounds: L.LatLngBounds | null = null;
   const path = makeLeafletPath(map);
 
+  for (const view of thematicViews) {
+    const thId = view.thematicLayerRef;
+    if (!thId) continue;
+    if (view.type === "raster") {
+      const z = view.zoom_level ?? 16;
+
+      const tiles = await fetch(
+        `http://127.0.0.1:5000/api/list-rasters/${thId}`
+      ).then((r) => r.json());
+      const cacheBust = Date.now(); // define once outside the loop
+
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      for (const name of tiles) {
+        if (name.endsWith("_.png")) continue;
+        const [xStr, yStr] = name.replace(".png", "").split("_");
+        const x = Number(xStr);
+        const y = Number(yStr);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        // collect extents
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+
+        const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}?v=${cacheBust}`;
+
+        console.log("raster tile url:", url);
+        const bounds = tileBoundsFromXYZ(x, y, z, map);
+
+        // include opacity from view definition
+        const overlay = L.imageOverlay(url, bounds, {
+          opacity: (view as any).opacity ?? 1,
+        });
+
+        overlay.addTo(map);
+        rasterOverlays.add(overlay);
+      }
+
+      // final union bounds (handles missing tiles!)
+      if (minX !== Infinity) {
+        const tileSize = 256;
+        const nwPoint = L.point(minX * tileSize, minY * tileSize);
+        const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
+
+        const nwLatLng = map.unproject(nwPoint, z);
+        const seLatLng = map.unproject(sePoint, z);
+
+        const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
+
+        unionBounds = unionBounds
+          ? unionBounds.extend(rasterBounds)
+          : rasterBounds;
+      }
+    }
+  }
+
   for (const view of physicalViews) {
     const plId = view.physicalLayerRef;
     if (!plId) continue;
+    // ----- RASTER VIEWS -----
+    if (view.type === "raster") {
+      const z = view.zoom_level ?? 16;
+
+      const tiles = await fetch(
+        `http://127.0.0.1:5000/api/list-rasters/${plId}`
+      ).then((r) => r.json()); // [ "16812_24353.png", ... ]
+
+      const cacheBust = Date.now();
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      for (const name of tiles) {
+        if (name.endsWith("_.png")) continue;
+        const [xStr, yStr] = name.replace(".png", "").split("_");
+        const x = Number(xStr);
+        const y = Number(yStr);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        // collect extents
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}?v=${cacheBust}`;
+        console.log("raster tile url:", url);
+
+        // compute bounds for this tile at zoom z
+        const bounds = tileBoundsFromXYZ(x, y, z, map); // you implement this
+
+        // include opacity from view definition
+        const overlay = L.imageOverlay(url, bounds, {
+          opacity: (view as any).opacity ?? 1,
+        });
+
+        // L.rectangle(bounds, {
+        //   weight: 1,
+        //   fillOpacity: 0,
+        // }).addTo(map);
+
+        overlay.addTo(map);
+        rasterOverlays.add(overlay);
+        if (minX !== Infinity) {
+          const tileSize = 256;
+          const nwPoint = L.point(minX * tileSize, minY * tileSize);
+          const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
+
+          const nwLatLng = map.unproject(nwPoint, z);
+          const seLatLng = map.unproject(sePoint, z);
+
+          const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
+
+          unionBounds = unionBounds
+            ? unionBounds.extend(rasterBounds)
+            : rasterBounds;
+        }
+      }
+
+      continue; // skip vector logic for this view
+    }
+    if (view.type !== "vector") continue;
+
+    console.log(view);
+    // If no id → invalid
+    if (!plId) continue;
+
+    // Find matching physical layer
+    // const pl = physicalLayers.find((p) => p.id === plId);
+
+    // Must exist AND must be vector
+    if (view.type !== "vector") {
+      continue;
+    }
+
+    // console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
 
     // If you’ve already moved zIndex into ParsedLayer, just sort on a.zIndex / b.zIndex
     const layers = [...(view.layers ?? [])].sort((a: any, b: any) => {
@@ -137,7 +299,7 @@ export async function renderPhysicalLayersForViews(opts: {
 
     for (const lyr of layers) {
       const tag = lyr.tag;
-      const url = `http://127.0.0.1:5000/generated/${plId}_${tag}.geojson`;
+      const url = `http://127.0.0.1:5000/generated/vector/${plId}_${tag}.geojson`;
 
       let fc: any;
       try {
@@ -160,7 +322,7 @@ export async function renderPhysicalLayersForViews(opts: {
 
       const strokeColor = lyr.stroke?.color ?? "#222";
       const strokeWidth = lyr.stroke?.width ?? 1;
-      const fillOpacity = lyr.opacity ?? 0.7;
+      const fillOpacity = lyr.opacity ?? 1;
       const fallbackFill = "#6aa9ff";
 
       const gTag = getOrCreateTagGroup(tag);

@@ -16,6 +16,9 @@ from pyproj import Transformer
 import datashader as ds
 from datashader.core import bypixel
 import os
+
+from pathlib import Path
+
 os.environ['USE_PYGEOS'] = '0'
 
 transformer = Transformer.from_crs(3395, 4326)
@@ -175,9 +178,16 @@ def elevation(filtered, bbox):
     return values
 
 def create_image(values, i, j, zoom, max_height, outputfolder):
-    filename = '%s/%d_%d_%d.png'%(outputfolder,zoom,i,j)
-    success = cv2.imwrite(filename, 255.0 * (values / max_height))
-    if not success:
+    filename_ = '%s/%d_%d_.png'%(outputfolder,i,j)
+    filename = '%s/%d_%d.png'%(outputfolder,i,j)
+
+    values = 255.0 * (values / max_height)
+    success_ = cv2.imwrite(filename_, values)
+
+    arr = 255 - values
+    success = cv2.imwrite(filename, arr)
+
+    if not success or not success_:
         raise Exception("Could not write image")
         
 # @dask.delayed
@@ -190,63 +200,57 @@ def compute_tile(gdf, i, j, zoom, max_height, outputfolder):
 #     filtered = gdf.cx[bb0[0]:bb1[0],bb0[1]:bb1[1]]
     filtered = gdf.loc[gdf.sindex.intersection(bbox.bounds)]
     
-    if len(filtered) > 0:
-        values = elevation(filtered, bbox)
-        create_image(values, i, j, zoom, max_height, outputfolder)
+    # if len(filtered) > 0:
+    values = elevation(filtered, bbox)
+    create_image(values, i, j, zoom, max_height, outputfolder)
 
     # else:
     #     print(f"No data for tile {zoom}/{i}/{j}")
 
-def convert_raster(dir, pl_id, tag, feature, zoom):
-    filepath = dir / f"{pl_id}_{tag}.geojson"
+def convert_raster(input, tag, feature, zoom, output):
+    dir = Path("./data/served")
+    filepath = dir / "vector" / f"{input}_{tag}.geojson"
+    
     gdf = gpd.read_file(filepath)
-
-    min_lon, min_lat, max_lon, max_lat = gdf.total_bounds
-
-    # (top-left)
-    x0, y0 = deg2num(max_lat, min_lon, zoom)
-    # (bottom-right)
-    x1, y1 = deg2num(min_lat, max_lon, zoom)
-
-    min_x = math.floor(x0)   # left
-    max_x = math.ceil(x1)    # right
-    min_y = math.floor(y0)   # top
-    max_y = math.ceil(y1)    # bottom
-
     gdf = gdf.to_crs(epsg=3395)
-    outdir = dir / f"{pl_id}_{tag}_{zoom}_{feature}_raster"
+
+    bounds = gdf.total_bounds
+    lat0,lng0 = transformer.transform(bounds[0],bounds[1])
+    lat1,lng1 = transformer.transform(bounds[2],bounds[3])
+    coord0 = deg2num(lat0,lng0,zoom)
+    coord1 = deg2num(lat1,lng1,zoom)
+    bottomleft = [min(coord0[0],coord1[0]),min(coord0[1],coord1[1])]
+    topright = [max(coord0[0],coord1[0]),max(coord0[1],coord1[1])]
+
+    
+    outdir = dir / 'raster' / f"{output}"
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    if outdir.exists():
+        for file in outdir.iterdir():
+            file.unlink()
 
     if tag == "buildings" and feature == "height":
         outdir.mkdir(parents=True, exist_ok=True)
         delayed = []
-        for i in range(min_x, max_x + 1):
-            for j in range(min_y, max_y + 1):
+        for i in range(math.floor(bottomleft[0]),math.ceil(topright[0])):
+            for j in range(math.floor(bottomleft[1]),math.ceil(topright[1])):
                 ddelayed = compute_tile(gdf, i, j, zoom, 550, outdir)
                 delayed.append(ddelayed)
-            
-        dask.compute(*delayed);
+        dask.compute(*delayed)
+    
+        print(f"Raster tiles for buildings height created at zoom level {zoom} in {outdir}")
     else:
         print(f"Feature '{feature}' not supported for layer '{tag}'")
 
     return
 
-# Later will remove this and call from server.py
-if __name__ == "__main__":
-    import argparse
-    from pathlib import Path
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", required=True, help="Folder with <pl_id>_<tag>.geojson")
-    parser.add_argument("--pl_id", required=True)
-    parser.add_argument("--tag", required=True, default="buildings")
-    parser.add_argument("--feature", required=True, default="height")
-    parser.add_argument("--zoom", type=int, required=True)
-    args = parser.parse_args()
+# from convert_to_raster import convert_raster
 
-    convert_raster(Path(args.dir), args.pl_id, args.tag, args.feature, args.zoom)
+# input = "baselayer-0"
+# tag = "buildings"
+# feature = "height"
+# zoom = 16
+# output = "rasters-baselayer-0"
 
-# python convert_to_raster.py \
-#   --dir ./data/served \
-#   --pl_id baselayer-0 \
-#   --tag buildings \
-#   --feature height \
-#   --zoom 16
+# convert_raster(input, tag, feature, zoom, output)
