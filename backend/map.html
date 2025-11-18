@@ -138,7 +138,7 @@
           origin: [origin.lat, origin.lng],
           destination: [destination.lat, destination.lng],
           bbox: [41.895, 41.875, -87.62, -87.645],
-          map_view_mode: "Variable",
+          map_view_mode: "Optimized",
           paths: 1,
           weather: ["rain"],
           weights: [0.85834],
@@ -217,7 +217,8 @@
           heat: "red",
           wind: "purple",
           humidity: "green",
-          fastest: "black"
+          quickest_path: "black",
+          total_weight: "orange"
         };
         return colors[type] || "gray";
       }

@@ -214,6 +214,8 @@ def calculate_weather_aware_route():
     weather_weights = data["weights"]
     time = data["time"]
     
+    print(map_view_mode)
+    
     
     route_coords = calculate_weather_route(datafile, 
                             origin, 

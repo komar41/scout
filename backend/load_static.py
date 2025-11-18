@@ -16,22 +16,56 @@ class DataLoader:
         self.wind_direction_data = {}
         self.heat_index_data = {}
         self.relative_humidity_data = {}
-        self.lat_min, self.lat_max = 41.61, 42.04
-        self.lon_min, self.lon_max = -88.03, -87.30
+        self.lat_min, self.lat_max = None, None
+        self.lon_min, self.lon_max = None, None
         self.time = time
+        self.isGraphLoaded = False
 
-    def load_graph(self, graph_path=None):
+    def load_graph(self, graph_path, bbox=None):
         """
         Loads the graph from a pkl.gz file
         
+        Handles cropping based on bounding box if provided.
+        
         Parameters:
         graph_path (str): Path to the GraphML file.
+        bbox (list): [lat_min, lat_max, lon_min, lon_max]
         """
-        with gzip.open("./data/%s/roads.pkl.gz" % graph_path, "rb") as f:
-            G = pickle.load(f)
-        return G
+
+        # Check if new bbox is within current loaded area
+        if bbox is not None and self.isGraphLoaded:
+            if (bbox[0] < self.lat_min or bbox[1] > self.lat_max or 
+                bbox[2] < self.lon_min or bbox[3] > self.lon_max):
+                print("Provided bounding box is out of bounds for the loaded area.")
+                print(f"Requested: lat({bbox[0]}, {bbox[1]}), lon({bbox[2]}, {bbox[3]})")
+                print(f"Loaded: lat({self.lat_min}, {self.lat_max}), lon({self.lon_min}, {self.lon_max})")
+                self.isGraphLoaded = False
+            else:
+                print("Graph already loaded")
+                return self.G
+
+        if not self.isGraphLoaded:
+            print("Graph not loaded, loading now")
+            with gzip.open("./data/%s/roads.pkl.gz" % graph_path, "rb") as f:
+                G_temp = pickle.load(f)
+            if bbox is not None:
+                self.lat_max, self.lat_min = bbox[0], bbox[1] # ymax, ymin
+                self.lon_max, self.lon_min = bbox[2], bbox[3] # xmax, xmin
+
+            # Crop the dataset
+            nodes, _ = ox.graph_to_gdfs(G_temp, nodes=True, edges=True, fill_edge_geometry=False)
+            mask = (
+                (nodes["y"] <= self.lat_max) & (nodes["y"] >= self.lat_min) &
+                (nodes["x"] <= self.lon_max) & (nodes["x"] >= self.lon_min)
+            )
+            node_ids = nodes.loc[mask].index
+            self.G = G_temp.subgraph(node_ids)
+            
+            self.isGraphLoaded = True
+            print(f"Graph loaded with bounds")
         
-        
+        return self.G
+
     def load_NetCDF_data(self, data_path, variable_name):
         """
         Loads data from a NetCDF file and masks it to the specified lat/lon bounds for faster calculations.
