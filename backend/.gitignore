@@ -1,8 +1,6 @@
 envs
 cache
-data/chicago
-data/served
-
+data
 .DS_Store
 geoenvs
 models
