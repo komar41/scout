@@ -11,7 +11,7 @@ import * as d3 from "d3";
 import { ViewDef, InteractionDef } from "./utils/types";
 import { parseInteraction, parseView } from "./utils/parser";
 import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
-import { TransformationNodeData } from "./TransformationNode";
+// import { TransformationNodeData } from "./TransformationNode";
 
 export type ViewportNodeData = {
   center?: [number, number];
@@ -31,7 +31,7 @@ const ViewportNode = memo(function ViewportNode({
   const [persisting, setPersisting] = useState(false);
   const [persistSuccess, setPersistSuccess] = useState(false);
 
-  const { getEdges, setNodes, setEdges } = useReactFlow();
+  const { getEdges, setEdges } = useReactFlow();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
@@ -81,8 +81,6 @@ const ViewportNode = memo(function ViewportNode({
     setPersistSuccess(false);
 
     try {
-      console.log(entries, "<<< persisting edits");
-
       const tasks = entries.map(({ plId, tag, geojson }) =>
         fetch("http://127.0.0.1:5000/api/update-physical-layer", {
           method: "POST",
@@ -158,10 +156,11 @@ const ViewportNode = memo(function ViewportNode({
         interaction: nodeData.interactions,
       });
 
-      const physicalLayers = nodeData.physical_layers;
+      // const physicalLayers = nodeData.physical_layers;
 
       if (!parsed || !parsed.length) {
         clearAllSvgLayers();
+
         return;
       }
 
@@ -170,7 +169,7 @@ const ViewportNode = memo(function ViewportNode({
         map,
         parsedViews: parsed,
         parsedInteractions: parsedInteractions,
-        physicalLayers,
+        // physicalLayers,
         clearAllSvgLayers,
         makeLeafletPath,
         getOrCreateTagGroup,
@@ -315,29 +314,11 @@ const ViewportNode = memo(function ViewportNode({
       .filter((e) => e.source === id)
       .map((e) => e.target);
 
-    // 1) Clear physical_layers and view on connected viewport nodes
-    setNodes((nds) =>
-      nds
-        .map((nn) => {
-          if (nn.type !== "transformationNode" || !targetIds.includes(nn.id))
-            return nn;
-
-          const td = nn.data as TransformationNodeData;
-          const nextData: TransformationNodeData = {
-            ...td,
-            physical_layers: undefined,
-          };
-
-          console.log(nextData);
-          return { ...nn, data: nextData };
-        })
-        // 2) Remove this view node itself
-        .filter((nn) => nn.id !== id)
-    );
+    // Since we are not using the transformation node anymore, this logic here stays empty for now!!
 
     // 3) Remove all edges touching the closed view node
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
-  }, [data, id, rf, getEdges, setNodes, setEdges]);
+  }, [data, id, rf, getEdges, setEdges]);
 
   const onRun = useCallback(() => {
     if (data?.onRun) return data.onRun(id);

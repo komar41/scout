@@ -11,6 +11,7 @@ from shapely.geometry import Polygon
 from flask import send_from_directory, abort
 from convert_to_raster import convert_raster
 from deep_umbra import run_shadow_model
+from download_data import download_osm_data, extract_roads, extract_buildings
 import osmnx as ox
 import pickle, gzip
 
@@ -265,6 +266,7 @@ def run_python():
     payload = request.get_json() or {}
     code = payload.get("code", "")
 
+    tmp_filename = None
     try:
         # Create a temp file to run code
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
@@ -272,39 +274,58 @@ def run_python():
             tmp_filename = tmp.name
 
         project_dir = Path(__file__).parent
+        python_exe = project_dir / "envs" / ("python.exe" if os.name == "nt" else "bin/python")
+
+        if not python_exe.exists():
+            return jsonify({
+                "stdout": "",
+                "stderr": f"Python interpreter not found at: {python_exe}",
+                "returncode": -1,
+            }), 200
+        
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(project_dir) + ":" + env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = str(project_dir) + os.pathsep + env.get("PYTHONPATH", "")
 
-        print(project_dir)
+        print("Using interpreter:", python_exe)
 
-        result = subprocess.run(
-            ["python3", tmp_filename],
-            capture_output=True,
-            text=True,
-            timeout=3600,
-            cwd=str(project_dir),
-            env=env
-        )
+        # 2. Run subprocess (wrapped in try/except)
+        try:
+            result = subprocess.run(
+                [str(python_exe), tmp_filename],
+                capture_output=True,
+                text=True,
+                timeout=3600,
+                cwd=str(project_dir),
+                env=env
+            )
 
-        return jsonify({
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode
-        }), 200
+            return jsonify({
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }), 200
 
-    except subprocess.TimeoutExpired:
-        return jsonify({
-            "stdout": "",
-            "stderr": "Execution timed out.",
-            "returncode": -1
-        }), 200
+        except subprocess.TimeoutExpired:
+            return jsonify({
+                "stdout": "",
+                "stderr": "Execution timed out.",
+                "returncode": -1
+            }), 200
 
-    except Exception as e:
-        return jsonify({
-            "stdout": "",
-            "stderr": str(e),
-            "returncode": -1
-        }), 200
+        except Exception as e:
+            return jsonify({
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }), 200
+        
+    finally:
+        # 3. Cleanup temp file
+        if tmp_filename and os.path.exists(tmp_filename):
+            try:
+                os.remove(tmp_filename)
+            except OSError:
+                pass
 
 
 if __name__ == '__main__':
