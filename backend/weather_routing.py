@@ -72,11 +72,30 @@ def calculate_weather_route(datafile,
     route = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
     trip_times_seconds = calculate_isochrones(G, orig_node, route)
 
+    # In the optimized mode we always use the default weights
+    if map_view_mode == "Optimized":
+        rain_weight = 0.85834
+        heat_weight = 0.02850
+        humidity_weight = 0.09648
+        wind_weight = 0.01657
+    # In maps mode we are able to create a (for example) rain + heat aware path, so we need to check that the sum of weights is less than 1.0
+    elif map_view_mode == "Maps":
+        if sum(weather_weights) > 1.0:
+            raise ValueError("In 'Maps' mode, the sum of weather weights must be 1.0")
+    # In variable mode we just assign the weights as per user input as long as they are between 0 and 1
+    else:
+        rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0
+        heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0
+        wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0
+        humidity_weight = weather_weights[weather_conditions.index('humidity')] if 'humidity' in weather_conditions else 0
+        
+        if (rain_weight < 0 or rain_weight > 1 or
+            heat_weight < 0 or heat_weight > 1 or
+            wind_weight < 0 or wind_weight > 1 or
+            humidity_weight < 0 or humidity_weight > 1):
+            raise ValueError("In 'Variable' mode, each weather weight must be between 0 and 1.")
     
-    rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0.01
-    heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0.01
-    wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0.01
-    humidity_weight = weather_weights[weather_conditions.index('humidity')] if 'humidity' in weather_conditions else 0.01
+    
 
     print("Weather weights: ", rain_weight, heat_weight, wind_weight, humidity_weight)
 
@@ -146,7 +165,7 @@ def calculate_weather_route(datafile,
         })
 
         
-
+    # With this you are able to compare a only rain aware path, a only heat aware path and a heat + rain aware path
     elif map_view_mode == "Maps": 
     
         # For future reference, the k_shortest_paths and shortest_paths are the ones that acually return a list of osm ID's
