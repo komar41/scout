@@ -15,8 +15,10 @@ from download_data import download_osm_data, extract_roads, extract_buildings
 import osmnx as ox
 import pickle, gzip
 
+from weather_routing import *
 import subprocess
 import tempfile
+
 
 app = Flask(__name__)
 CORS(app)
@@ -260,6 +262,35 @@ def convert_to_raster():
     convert_raster(pl_id, tag, feature, zoom, id)
 
     return jsonify({"status": "success"}), 200
+
+@app.route('/weather', methods=["POST"])
+def calculate_weather_aware_route():
+    data = request.get_json()
+    datafile = data["city"]
+    origin = data["origin"]
+    destination = data["destination"]
+    bbox = data["bbox"] # Bounding box, assuming its sent as [ymax, ymin, xmax, xmin]
+    map_view_mode = data["map_view_mode"]
+    K_variable_paths = data["paths"]
+    weather_conditions = data["weather"]
+    weather_weights = data["weights"]
+    time = data["time"]
+    
+    print(map_view_mode)
+    
+    
+    route_coords = calculate_weather_route(datafile, 
+                            origin, 
+                            destination,
+                            bbox, 
+                            map_view_mode,
+                            K_variable_paths,
+                            weather_conditions,
+                            weather_weights,
+                            time)
+
+
+    return jsonify({"route_coords": route_coords}), 200
 
 @app.post("/api/run-python")
 def run_python():
