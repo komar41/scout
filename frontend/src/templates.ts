@@ -96,10 +96,10 @@ export const interactionTemplate = {
 
 export const widgetDefTemplate = {
   widget: {
-    id: "season-0",
+    id: "season_0",
     title: "Season",
     type: "radio-group",
-    description: "Select season for shadow analysis",
+    description: "(select season for shadow analysis)",
     items: ["spring", "summer", "winter"],
     layout: "horizontal",
     "default-value": "summer",
@@ -123,7 +123,7 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   // join: "join",
   transformation: "transformation",
   interaction: "interaction",
-  widget_def: "widget_def",
+  widget_def: "widget definition",
 };
 
 // -------------------------------------------

@@ -323,7 +323,7 @@ const ViewportNode = memo(function ViewportNode({
 
   return (
     <div className="vpnode">
-      <NodeResizer />
+      <NodeResizer minWidth={300} minHeight={260} />
 
       <div className="vpnode__header">
         <div className="vpnode__title">Viewport</div>

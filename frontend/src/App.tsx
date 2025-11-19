@@ -20,6 +20,7 @@ import { TEMPLATES, TEMPLATE_LABELS, TemplateKey } from "./templates";
 import "./App.css";
 // import { ViewNodeData } from "./nodes/ViewNode";
 import type { ViewportNodeData } from "./nodes/ViewportNode";
+import type { WidgetViewNodeData } from "./nodes/WidgetViewNode";
 import type { PyCodeEditorNodeData } from "./nodes/PyCodeEditorNode";
 import { TransformationNodeData } from "./nodes/TransformationNode";
 
@@ -34,7 +35,12 @@ export default function App() {
 function Canvas() {
   const idCounter = useRef(1);
   const [nodes, setNodes, onNodesChange] = useNodesState<
-    Node<BaseNodeData | ViewportNodeData>
+    Node<
+      | BaseNodeData
+      | ViewportNodeData
+      | PyCodeEditorNodeData
+      | WidgetViewNodeData
+    >
   >([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getNode, getEdges } = useReactFlow();
@@ -131,14 +137,15 @@ function Canvas() {
     [getNode, getEdges, setNodes]
   );
 
-  const pushWidgetDefToPyCodeEditor = useCallback(
+  const pushWidgetDefToWidgetView = useCallback(
     (srcId: string, trgId?: string) => {
       const src = getNode(srcId);
       if (!src || src.type !== "widgetDefNode") return;
 
       const val: any = (src.data as BaseNodeData).value;
-      const wdef = val?.widget;
-      if (!wdef) return;
+      const wDef = val?.widget;
+
+      if (!wDef) return;
 
       const targetIds = trgId
         ? [trgId]
@@ -149,25 +156,55 @@ function Canvas() {
 
       setNodes((nds) =>
         nds.map((n) => {
-          if (!targetIds.includes(n.id) || n.type !== "pyCodeEditorNode")
+          if (!targetIds.includes(n.id) || n.type !== "widgetViewNode")
             return n;
-          const existing = (n.data as PyCodeEditorNodeData).widgets ?? [];
-          const already = existing.some((e) => e.id === wdef.id);
-          const nextWidgets = already
-            ? existing.map((e) => (e.id === wdef.id ? wdef : e))
-            : [...existing, wdef];
-
           return {
             ...n,
             data: {
               ...n.data,
-              widgets: nextWidgets,
-            } as PyCodeEditorNodeData,
+              widget: wDef,
+            } as WidgetViewNodeData,
           };
         })
       );
     },
     [getNode, getEdges, setNodes]
+  );
+
+  const pushWidgetViewToPyCodeEditorNode = useCallback(
+    (srcId: string, trgId?: string) => {
+      const src = getNode(srcId);
+      if (!src || src.type !== "widgetViewNode") return;
+      const val: any = src.data as WidgetViewNodeData;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      // setNodes((nds) =>
+      //   nds.map((n) => {
+      //     if (!targetIds.includes(n.id) || n.type !== "pyCodeEditorNode")
+      //       return n:
+      //     const existing = (n.data as PyCodeEditorNodeData).widgetOutputs ?? [];
+      //     const already = existing.some((e) => e.id === val.widget?.id);
+      //     const nextWidgetOutputs = already
+      //       ? existing.map((e) =>
+      //           e.id === val.widget?.id ? { id: val.widget?.id, value: val.value } : e
+      //         )
+      //       : [...existing, { id: val.widget?.id, value: val.value }];
+      //     return {
+      //       ...n,
+      //       data: {
+      //         ...n.data,
+      //         widgetOutputs: nextWidgetOutputs,
+      //       } as PyCodeEditorNodeData,
+      //     };
+      //   })
+      // );
+    }
   );
 
   const pushViewportToTransformation = useCallback(
@@ -205,7 +242,7 @@ function Canvas() {
         onRunPhysical: pushPhysicalToViews,
         onRunView: pushViewToViewports,
         onRunInteraction: pushInteractionToViewport,
-        onRunWidgetDef: pushWidgetDefToPyCodeEditor,
+        onRunWidgetDef: pushWidgetDefToWidgetView,
       });
     },
     [
@@ -214,7 +251,7 @@ function Canvas() {
       pushPhysicalToViews,
       pushViewToViewports,
       pushInteractionToViewport,
-      pushWidgetDefToPyCodeEditor,
+      pushWidgetDefToWidgetView,
     ]
   );
 
@@ -233,6 +270,15 @@ function Canvas() {
       id: nextId,
       setNodes,
       // onRunViewport: pushViewportToTransformation,
+    });
+  }, [setNodes]);
+
+  const addWidgetViewNode = useCallback(() => {
+    const nextId = `widgetView-${idCounter.current++}`;
+    createWidgetViewNode({
+      id: nextId,
+      setNodes,
+      // onRunWidgetView: push,
     });
   }, [setNodes]);
 
@@ -267,8 +313,8 @@ function Canvas() {
       const pyCodeEditorToPyCodeEditor =
         src.type === "pyCodeEditorNode" && trg.type === "pyCodeEditorNode";
 
-      const widgetDefToPyCodeEditor =
-        src.type === "widgetDefNode" && trg.type === "pyCodeEditorNode";
+      const widgetDefToWidgetView =
+        src.type === "widgetDefNode" && trg.type === "widgetViewNode";
 
       return (
         physToView ||
@@ -279,7 +325,7 @@ function Canvas() {
         transformationToPyCodeEditor ||
         PyCodeEditorToView ||
         pyCodeEditorToPyCodeEditor ||
-        widgetDefToPyCodeEditor
+        widgetDefToWidgetView
       );
     },
     [getNode]
@@ -328,8 +374,8 @@ function Canvas() {
         return;
       }
 
-      if (src.type === "widgetDefNode" && trg.type === "pyCodeEditorNode") {
-        pushWidgetDefToPyCodeEditor(srcId, trgId);
+      if (src.type === "widgetDefNode" && trg.type === "widgetViewNode") {
+        pushWidgetDefToWidgetView(srcId, trgId);
         return;
       }
     },
@@ -341,7 +387,7 @@ function Canvas() {
       pushViewToViewports,
       pushInteractionToViewport,
       pushViewportToTransformation,
-      pushWidgetDefToPyCodeEditor,
+      pushWidgetDefToWidgetView,
     ]
   );
 
@@ -366,6 +412,7 @@ function Canvas() {
           onAdd={addNode}
           onAddViewport={addViewport}
           onAddPyCodeEditor={addPyCodeEditorNode}
+          onAddWidgetView={addWidgetViewNode}
         />
       </ReactFlow>
     </div>
@@ -376,10 +423,12 @@ function Toolbar({
   onAdd,
   onAddViewport,
   onAddPyCodeEditor,
+  onAddWidgetView,
 }: {
   onAdd: (tpl: TemplateKey) => void;
   onAddViewport: () => void;
   onAddPyCodeEditor: () => void;
+  onAddWidgetView: () => void;
 }) {
   const { screenToFlowPosition } = useReactFlow();
   const [open, setOpen] = useState(false);
@@ -409,6 +458,11 @@ function Toolbar({
     (window as any)._desiredGrammarPos = getDropPosition();
     onAddPyCodeEditor();
   }, [getDropPosition, onAddPyCodeEditor]);
+
+  const handleAddWidgetView = useCallback(() => {
+    (window as any)._desiredGrammarPos = getDropPosition();
+    onAddWidgetView();
+  }, [getDropPosition, onAddWidgetView]);
 
   return (
     <div className="toolbar">
@@ -447,6 +501,10 @@ function Toolbar({
       <button onClick={handleAddPyCodeEditor} className="toolbar__btn">
         ➕ Code
       </button>
+
+      <button onClick={handleAddWidgetView} className="toolbar__btn">
+        ➕ Widget
+      </button>
     </div>
   );
 }
@@ -468,16 +526,27 @@ function createGrammarNode({
   onRunPhysical,
   onRunView,
   onRunInteraction,
-}: {
+  onRunWidgetDef,
+}: // onRunWidgetView
+{
   id: string;
   setNodes: React.Dispatch<
-    React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
+    React.SetStateAction<
+      Node<
+        | BaseNodeData
+        | ViewportNodeData
+        | PyCodeEditorNodeData
+        | WidgetViewNodeData
+      >[]
+    >
   >;
   template: TemplateKey;
   getNode: (id: string) => Node | undefined;
   onRunPhysical: (srcId: string) => void;
   onRunView: (srcId: string) => void;
   onRunInteraction: (srcId: string) => void;
+  onRunWidgetDef: (srcId: string) => void;
+  // onRunWidgetView: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -509,6 +578,8 @@ function createGrammarNode({
         } else if (node.type === "transformationNode") {
           const data = node.data as TransformationNodeData;
           console.log("Transformation node data:", data);
+        } else if (node.type === "widgetDefNode") {
+          onRunWidgetDef(nodeId);
         }
       },
     },
@@ -525,7 +596,14 @@ function createViewportNode({
 }: {
   id: string;
   setNodes: React.Dispatch<
-    React.SetStateAction<Node<BaseNodeData | ViewportNodeData>[]>
+    React.SetStateAction<
+      Node<
+        | BaseNodeData
+        | ViewportNodeData
+        | PyCodeEditorNodeData
+        | WidgetViewNodeData
+      >[]
+    >
   >;
   data?: { center?: [number, number]; zoom?: number };
   onRunViewport?: (srcId: string) => void;
@@ -550,6 +628,38 @@ function createViewportNode({
   setNodes((nds) => nds.concat(newNode));
 }
 
+function createWidgetViewNode({
+  id,
+  setNodes,
+}: // onRunWidgetView,
+{
+  id: string;
+  setNodes: React.Dispatch<
+    React.SetStateAction<
+      Node<
+        | BaseNodeData
+        | ViewportNodeData
+        | PyCodeEditorNodeData
+        | WidgetViewNodeData
+      >[]
+    >
+  >;
+}) {
+  const pos = { x: 150, y: 150 };
+  const newNode: Node<WidgetViewNodeData> = {
+    id,
+    type: "widgetViewNode",
+    position: pos,
+    width: 400,
+    height: 300,
+    data: {
+      // onClose: onCloseWidgetView
+      // onRun: onRunWidgetView
+    },
+  };
+  setNodes((nds) => nds.concat(newNode));
+}
+
 function createPyCodeEditorNode({
   id,
   setNodes,
@@ -557,9 +667,10 @@ function createPyCodeEditorNode({
 {
   id: string;
   setNodes: React.Dispatch<
-    React.SetStateAction<Node<BaseNodeData | PyCodeEditorNodeData>[]>
+    React.SetStateAction<
+      Node<BaseNodeData | PyCodeEditorNodeData | WidgetViewNodeData>[]
+    >
   >;
-  data?: {};
   // onRunViewport?: (srcId: string) => void;
 }) {
   const pos = { x: 150, y: 150 };
@@ -570,11 +681,7 @@ function createPyCodeEditorNode({
     position: pos,
     width: 400,
     height: 300,
-    data: {
-      // onRun: onRunViewport
-      //   ? (srcId: string) => onRunViewport(srcId)
-      //   : undefined,
-    },
+    data: {},
   };
 
   setNodes((nds) => nds.concat(newNode));
