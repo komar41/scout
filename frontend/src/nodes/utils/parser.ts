@@ -46,7 +46,6 @@ export function parseView(raw: any): ParsedView[] {
 }
 
 export function parseInteraction(raw: any): InteractionDef[] {
-  // console.log(raw, "<<< raw interaction");
   if (!raw?.interaction || !Array.isArray(raw.interaction)) return [];
 
   return raw.interaction
@@ -78,3 +77,5 @@ export function parseInteraction(raw: any): InteractionDef[] {
         !!d.layer?.tag
     );
 }
+
+// parser for widget def. should parse according to widget type and then we can pass it to the widgetview node and render accordingly

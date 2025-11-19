@@ -62,3 +62,13 @@ export type ParsedInteraction = {
     feature?: string;
   };
 };
+
+export type widgetDef = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  "default-value": any;
+
+  [key: string]: any;
+};

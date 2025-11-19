@@ -5,16 +5,15 @@ import "./PyCodeEditorNode.css";
 import restartPng from "../assets/restart.png";
 import runPng from "../assets/run.png";
 import checkPng from "../assets/check-mark.png";
-import { PhysicalLayerDef, ViewDef, InteractionDef } from "./utils/types";
+import { widgetDef } from "./utils/types";
 import PythonCodeEditor from "../components/PythonCodeEditor";
 
 export type PyCodeEditorNodeData = {
   code?: string; // <-- added here
   onClose?: (id: string) => void;
   onRun?: (srcId: string, code: string) => void;
-  physical_layers?: PhysicalLayerDef[];
-  view?: ViewDef[];
-  interactions?: InteractionDef[];
+
+  widgets?: widgetDef[];
 };
 
 export type PyCodeEditorNode = Node<PyCodeEditorNodeData, "pyCodeEditorNode">;

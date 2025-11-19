@@ -131,6 +131,45 @@ function Canvas() {
     [getNode, getEdges, setNodes]
   );
 
+  const pushWidgetDefToPyCodeEditor = useCallback(
+    (srcId: string, trgId?: string) => {
+      const src = getNode(srcId);
+      if (!src || src.type !== "widgetDefNode") return;
+
+      const val: any = (src.data as BaseNodeData).value;
+      const wdef = val?.widget;
+      if (!wdef) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id) || n.type !== "pyCodeEditorNode")
+            return n;
+          const existing = (n.data as PyCodeEditorNodeData).widgets ?? [];
+          const already = existing.some((e) => e.id === wdef.id);
+          const nextWidgets = already
+            ? existing.map((e) => (e.id === wdef.id ? wdef : e))
+            : [...existing, wdef];
+
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              widgets: nextWidgets,
+            } as PyCodeEditorNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
   const pushViewportToTransformation = useCallback(
     (srcId: string, trgId?: string) => {
       // Don't think we need to pass anything from viewport to transformation for now!!
@@ -166,6 +205,7 @@ function Canvas() {
         onRunPhysical: pushPhysicalToViews,
         onRunView: pushViewToViewports,
         onRunInteraction: pushInteractionToViewport,
+        onRunWidgetDef: pushWidgetDefToPyCodeEditor,
       });
     },
     [
@@ -174,6 +214,7 @@ function Canvas() {
       pushPhysicalToViews,
       pushViewToViewports,
       pushInteractionToViewport,
+      pushWidgetDefToPyCodeEditor,
     ]
   );
 
@@ -223,8 +264,11 @@ function Canvas() {
       const PyCodeEditorToView =
         src.type === "pyCodeEditorNode" && trg.type === "viewNode";
 
-      const PyCodeEditorToPyCodeEditor =
+      const pyCodeEditorToPyCodeEditor =
         src.type === "pyCodeEditorNode" && trg.type === "pyCodeEditorNode";
+
+      const widgetDefToPyCodeEditor =
+        src.type === "widgetDefNode" && trg.type === "pyCodeEditorNode";
 
       return (
         physToView ||
@@ -234,7 +278,8 @@ function Canvas() {
         viewportToTransformation ||
         transformationToPyCodeEditor ||
         PyCodeEditorToView ||
-        PyCodeEditorToPyCodeEditor
+        pyCodeEditorToPyCodeEditor ||
+        widgetDefToPyCodeEditor
       );
     },
     [getNode]
@@ -282,6 +327,11 @@ function Canvas() {
         // pushTransformationToPyCodeEditor(srcId, trgId);
         return;
       }
+
+      if (src.type === "widgetDefNode" && trg.type === "pyCodeEditorNode") {
+        pushWidgetDefToPyCodeEditor(srcId, trgId);
+        return;
+      }
     },
     [
       allow,
@@ -291,6 +341,7 @@ function Canvas() {
       pushViewToViewports,
       pushInteractionToViewport,
       pushViewportToTransformation,
+      pushWidgetDefToPyCodeEditor,
     ]
   );
 
@@ -406,6 +457,7 @@ const kindToType: Record<TemplateKey, keyof typeof nodeTypes> = {
   view: "viewNode",
   interaction: "interactionNode",
   transformation: "transformationNode",
+  widget_def: "widgetDefNode",
 };
 
 function createGrammarNode({
@@ -501,7 +553,6 @@ function createViewportNode({
 function createPyCodeEditorNode({
   id,
   setNodes,
-  data,
 }: // onRunViewport,
 {
   id: string;

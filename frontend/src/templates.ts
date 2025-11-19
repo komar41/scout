@@ -2,7 +2,8 @@ export type TemplateKey =
   | "physical_layer"
   | "view"
   | "interaction"
-  | "transformation";
+  | "transformation"
+  | "widget_def";
 // | "choice"
 // | "join"
 
@@ -93,6 +94,18 @@ export const interactionTemplate = {
   },
 };
 
+export const widgetDefTemplate = {
+  widget: {
+    id: "season-0",
+    title: "Season",
+    type: "radio-group",
+    description: "Select season for shadow analysis",
+    items: ["spring", "summer", "winter"],
+    layout: "horizontal",
+    "default-value": "summer",
+  },
+};
+
 export const TEMPLATES: Record<TemplateKey, any> = {
   physical_layer: physicalLayerTemplate,
   view: viewTemplate,
@@ -100,6 +113,7 @@ export const TEMPLATES: Record<TemplateKey, any> = {
   // join: joinTemplate,
   transformation: transformationTemplate,
   interaction: interactionTemplate,
+  widget_def: widgetDefTemplate,
 };
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
@@ -109,6 +123,7 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   // join: "join",
   transformation: "transformation",
   interaction: "interaction",
+  widget_def: "widget_def",
 };
 
 // -------------------------------------------
