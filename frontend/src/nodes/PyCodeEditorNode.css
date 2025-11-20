@@ -126,7 +126,7 @@
   background: #fff;
   border: 1px solid #e5e7eb;
   box-shadow: 0 0 0 1px #f1f5f9 inset;
-  overflow: hidden;
+  overflow: auto;
 
   display: flex;
   flex-direction: column;
@@ -156,7 +156,7 @@
   border: 1px solid #e2e8f0;
 
   height: 60px;
-  overflow-y: auto;
+  overflow-y: hidden;
 
   text-align: left !important;
 }

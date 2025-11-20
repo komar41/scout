@@ -150,6 +150,14 @@
   width: 10px !important;
   height: 10px !important;
 }
+
+.gnode__handle__source {
+  background: #ff7043 !important;
+  border: 2px solid #fff !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
 .gnode__handle--left {
   top: 50% !important;
   transform: translateY(-50%) !important;
@@ -164,7 +172,7 @@
 }
 
 .interactionnode__handle {
-  background: #5c6bc0 !important;
+  background: #ff7043 !important;
   border: 2px solid #fff !important;
   width: 10px !important;
   height: 10px !important;
