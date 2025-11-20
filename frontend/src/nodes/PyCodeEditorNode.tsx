@@ -5,7 +5,7 @@ import "./PyCodeEditorNode.css";
 import restartPng from "../assets/restart.png";
 import runPng from "../assets/run.png";
 import checkPng from "../assets/check-mark.png";
-import { widgetDef } from "./utils/types";
+import { WidgetOutput } from "./utils/types";
 import PythonCodeEditor from "../components/PythonCodeEditor";
 
 export type PyCodeEditorNodeData = {
@@ -13,7 +13,7 @@ export type PyCodeEditorNodeData = {
   onClose?: (id: string) => void;
   onRun?: (srcId: string, code: string) => void;
 
-  widgets?: widgetDef[];
+  widgetOutputs?: WidgetOutput[];
 };
 
 export type PyCodeEditorNode = Node<PyCodeEditorNodeData, "pyCodeEditorNode">;

@@ -87,28 +87,28 @@ const WidgetDefNode = memo(function WidgetDefNode(
         type="source"
         position={Position.Left}
         id="widgetDef-out-1"
-        className="widgetDefnode__handle"
+        className="gnode__handle"
       />
 
       <Handle
         type="source"
         position={Position.Right}
         id="widgetDef-out-2"
-        className="widgetDefnode__handle"
+        className="gnode__handle"
       />
 
       <Handle
         type="source"
         position={Position.Top}
         id="widgetDef-out-3"
-        className="widgetDefnode__handle"
+        className="gnode__handle"
       />
 
       <Handle
         type="source"
         position={Position.Bottom}
         id="widgetDef-out-4"
-        className="widgetDefnode__handle"
+        className="gnode__handle"
       />
     </>
   );

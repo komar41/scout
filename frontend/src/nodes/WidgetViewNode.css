@@ -1,0 +1,112 @@
+.wvnode {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  overflow: visible;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.wvnode__header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  font-weight: 500;
+  font-size: 14px;
+  background: #d95f02;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.wvnode__iconBtn {
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+.wvnode__iconBtn--close {
+  margin-left: 6px;
+}
+
+.wvnode__actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.wvnode__actionIcon {
+  width: 18px;
+  height: 18px;
+  display: block; /* removes baseline gap */
+  pointer-events: none;
+}
+
+.wvnode__title {
+  color: #fff;
+}
+
+.wvnode__body {
+  position: relative;
+  display: flex;
+  justify-content: center; /* centers horizontally */
+  align-items: flex-start; /* no vertical centering (optional) */
+  padding: 8px 12px;
+  background: #fff;
+  /* border: 1px solid #e5e7eb; */
+  overflow: hidden;
+}
+
+.wvnode__footer {
+  border-top: 1px solid #eee;
+  padding: 6px 8px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  background: #fafafa;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.wvnode__handle__source {
+  width: 10px !important;
+  height: 10px !important;
+  background: #5c6bc0 !important;
+  border: 2px solid #fff !important;
+  border-radius: 50%;
+  z-index: 5;
+}
+
+.wvnode__handle__target {
+  width: 10px !important;
+  height: 10px !important;
+  background: #ff7043 !important;
+  border: 2px solid #fff !important;
+  border-radius: 50%;
+  z-index: 5;
+}

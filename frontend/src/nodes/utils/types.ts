@@ -63,7 +63,7 @@ export type ParsedInteraction = {
   };
 };
 
-export type widgetDef = {
+export type WidgetDef = {
   id: string;
   type: string;
   title: string;
@@ -71,4 +71,9 @@ export type widgetDef = {
   "default-value": any;
 
   [key: string]: any;
+};
+
+export type WidgetOutput = {
+  id: string;
+  value: any;
 };

@@ -26,6 +26,11 @@ import WidgetDefNode, {
   WidgetDefNodeData,
 } from "./WidgetDefNode";
 
+import WidgetViewNode, {
+  WidgetViewNode as WidgetViewNodeType,
+  WidgetViewNodeData,
+} from "./WidgetViewNode";
+
 import TransformationNode, {
   TransformationNode as TransformationNodeType,
   TransformationNodeData,
@@ -39,6 +44,7 @@ export const nodeTypes = {
   pyCodeEditorNode: PyCodeEditorNode,
   interactionNode: InteractionNode,
   widgetDefNode: WidgetDefNode,
+  widgetViewNode: WidgetViewNode,
   // joinNode: JoinNode,
   transformationNode: TransformationNode,
   // choiceNode: ChoiceNode,
@@ -52,7 +58,8 @@ export type AnyNode =
   | InteractionNodeType
   | TransformationNodeType
   | PyCodeEditorNodeType
-  | WidgetDefNodeType;
+  | WidgetDefNodeType
+  | WidgetViewNodeType;
 
 export type AnyNodeData =
   | BaseNodeData
@@ -61,4 +68,5 @@ export type AnyNodeData =
   | InteractionNodeData
   | TransformationNodeData
   | PyCodeEditorNodeData
-  | WidgetDefNodeData;
+  | WidgetDefNodeData
+  | WidgetViewNodeData;
