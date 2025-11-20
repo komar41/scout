@@ -154,6 +154,8 @@ function Canvas() {
             .map((e) => e.target!)
             .filter(Boolean);
 
+      const uuid = crypto.randomUUID();
+
       setNodes((nds) =>
         nds.map((n) => {
           if (!targetIds.includes(n.id) || n.type !== "widgetViewNode")
@@ -163,6 +165,7 @@ function Canvas() {
             data: {
               ...n.data,
               widget: wDef,
+              pushToken: uuid, // 👈 always changes on push
             } as WidgetViewNodeData,
           };
         })
@@ -175,7 +178,7 @@ function Canvas() {
     (srcId: string, trgId?: string) => {
       const src = getNode(srcId);
       if (!src || src.type !== "widgetViewNode") return;
-      const val: any = src.data as WidgetViewNodeData;
+      const val: WidgetViewNodeData = src.data;
 
       const targetIds = trgId
         ? [trgId]
@@ -184,27 +187,41 @@ function Canvas() {
             .map((e) => e.target!)
             .filter(Boolean);
 
-      // setNodes((nds) =>
-      //   nds.map((n) => {
-      //     if (!targetIds.includes(n.id) || n.type !== "pyCodeEditorNode")
-      //       return n:
-      //     const existing = (n.data as PyCodeEditorNodeData).widgetOutputs ?? [];
-      //     const already = existing.some((e) => e.id === val.widget?.id);
-      //     const nextWidgetOutputs = already
-      //       ? existing.map((e) =>
-      //           e.id === val.widget?.id ? { id: val.widget?.id, value: val.value } : e
-      //         )
-      //       : [...existing, { id: val.widget?.id, value: val.value }];
-      //     return {
-      //       ...n,
-      //       data: {
-      //         ...n.data,
-      //         widgetOutputs: nextWidgetOutputs,
-      //       } as PyCodeEditorNodeData,
-      //     };
-      //   })
-      // );
-    }
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id) || n.type !== "pyCodeEditorNode")
+            return n;
+          const existing = (n.data as PyCodeEditorNodeData).widgetOutputs ?? [];
+          const already = existing.some((e) => e.id === val.output?.id);
+          const nextWidgetOutputs = already
+            ? existing.map((e) =>
+                e.id === val.output?.id
+                  ? {
+                      id: val.output?.id,
+                      variable: val.output.variable,
+                      value: val.output.value,
+                    }
+                  : e
+              )
+            : [
+                ...existing,
+                {
+                  id: val.output?.id,
+                  variable: val.output?.variable,
+                  value: val.output?.value,
+                },
+              ];
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              widgetOutputs: nextWidgetOutputs,
+            } as PyCodeEditorNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
   );
 
   const pushViewportToTransformation = useCallback(
@@ -228,6 +245,49 @@ function Canvas() {
       getEdges,
       // setNodes
     ]
+  );
+
+  const handleCloseWidgetView = useCallback(
+    (nodeId: string) => {
+      const n = getNode(nodeId);
+      if (!n || n.type !== "widgetViewNode") return;
+
+      const widgetOutputId = (n.data as WidgetViewNodeData).output?.id;
+      const curEdges = getEdges();
+
+      // All targets currently connected FROM this view node
+      const targetIds = curEdges
+        .filter((e) => e.source === nodeId)
+        .map((e) => e.target);
+
+      setNodes((nds) =>
+        nds
+          .map((nn) => {
+            if (nn.type !== "pyCodeEditorNode" || !targetIds.includes(nn.id))
+              return nn;
+
+            const pyd = nn.data as PyCodeEditorNodeData;
+            const existing = pyd.widgetOutputs ?? [];
+
+            const nextOutputs = widgetOutputId
+              ? existing.filter((w) => w.id !== widgetOutputId)
+              : existing;
+
+            const nextData: PyCodeEditorNodeData = {
+              ...pyd,
+              widgetOutputs: nextOutputs.length ? nextOutputs : undefined,
+            };
+
+            return { ...nn, data: nextData };
+          })
+          .filter((nn) => nn.id !== nodeId)
+      );
+
+      setEdges((eds) =>
+        eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
+      );
+    },
+    [getNode, getEdges, setNodes, setEdges]
   );
 
   // Then remove the oncloseNode from createGrammarNode calls and declarations
@@ -278,9 +338,10 @@ function Canvas() {
     createWidgetViewNode({
       id: nextId,
       setNodes,
-      // onRunWidgetView: push,
+      onRunWidgetView: pushWidgetViewToPyCodeEditorNode,
+      onCloseWidgetView: handleCloseWidgetView,
     });
-  }, [setNodes]);
+  }, [setNodes, pushWidgetViewToPyCodeEditorNode, handleCloseWidgetView]);
 
   // --- allow only physicalLayerNode -> viewNode
   const allow = useCallback(
@@ -316,6 +377,9 @@ function Canvas() {
       const widgetDefToWidgetView =
         src.type === "widgetDefNode" && trg.type === "widgetViewNode";
 
+      const widgetViewToPyCodeEditor =
+        src.type === "widgetViewNode" && trg.type === "pyCodeEditorNode";
+
       return (
         physToView ||
         viewToViewport ||
@@ -325,7 +389,8 @@ function Canvas() {
         transformationToPyCodeEditor ||
         PyCodeEditorToView ||
         pyCodeEditorToPyCodeEditor ||
-        widgetDefToWidgetView
+        widgetDefToWidgetView ||
+        widgetViewToPyCodeEditor
       );
     },
     [getNode]
@@ -378,6 +443,11 @@ function Canvas() {
         pushWidgetDefToWidgetView(srcId, trgId);
         return;
       }
+
+      if (src.type === "widgetViewNode" && trg.type === "pyCodeEditorNode") {
+        pushWidgetViewToPyCodeEditorNode(srcId, trgId);
+        return;
+      }
     },
     [
       allow,
@@ -388,6 +458,7 @@ function Canvas() {
       pushInteractionToViewport,
       pushViewportToTransformation,
       pushWidgetDefToWidgetView,
+      pushWidgetViewToPyCodeEditorNode,
     ]
   );
 
@@ -546,7 +617,6 @@ function createGrammarNode({
   onRunView: (srcId: string) => void;
   onRunInteraction: (srcId: string) => void;
   onRunWidgetDef: (srcId: string) => void;
-  // onRunWidgetView: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -631,6 +701,8 @@ function createViewportNode({
 function createWidgetViewNode({
   id,
   setNodes,
+  onRunWidgetView,
+  onCloseWidgetView,
 }: // onRunWidgetView,
 {
   id: string;
@@ -644,6 +716,8 @@ function createWidgetViewNode({
       >[]
     >
   >;
+  onRunWidgetView?: (srcId: string) => void;
+  onCloseWidgetView?: (nodeId: string) => void;
 }) {
   const pos = { x: 150, y: 150 };
   const newNode: Node<WidgetViewNodeData> = {
@@ -655,6 +729,12 @@ function createWidgetViewNode({
     data: {
       // onClose: onCloseWidgetView
       // onRun: onRunWidgetView
+      onRun: onRunWidgetView
+        ? (srcId: string) => onRunWidgetView(srcId)
+        : undefined,
+      onClose: onCloseWidgetView
+        ? (nodeId: string) => onCloseWidgetView(nodeId)
+        : undefined,
     },
   };
   setNodes((nds) => nds.concat(newNode));

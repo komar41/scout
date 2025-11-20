@@ -1,17 +1,17 @@
-import { memo, use, useCallback, useEffect, useRef, useState } from "react";
+import { memo, use, useCallback, useEffect, useState } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
-// import "./ViewportNode.css";
 import "./WidgetViewNode.css";
 import restartPng from "../assets/restart.png";
-import { WidgetDef, WidgetOutput } from "./utils/types";
+import type { WidgetDef, WidgetOutput } from "./utils/types";
 import { renderWidgetFromWidgetDef } from "./utils/renderWidget";
-// import { TransformationNodeData } from "./TransformationNode";
 
 export type WidgetViewNodeData = {
   onClose?: (id: string) => void;
   onRun?: (srcId: string, trgId?: string) => void;
   widget?: WidgetDef;
+  output?: WidgetOutput;
+  pushToken?: string;
 };
 
 export type WidgetViewNode = Node<WidgetViewNodeData, "widgetViewNode">;
@@ -20,38 +20,55 @@ const WidgetViewNode = memo(function WidgetViewNode({
   id,
   data,
 }: NodeProps<WidgetViewNode>) {
-  const { getEdges, setEdges } = useReactFlow();
-  const rf = useReactFlow();
+  const { setNodes } = useReactFlow();
 
   // store current widget id + value
   const [widgetValue, setWidgetValue] = useState<WidgetOutput | null>(null);
 
-  const onClose = useCallback(() => {
-    if (data?.onClose) return data.onClose(id);
-    rf.setNodes((nds) => nds.filter((n) => n.id !== id));
-
-    const curEdges = getEdges();
-
-    // All targets currently connected FROM this widgetview node
-    const targetIds = curEdges
-      .filter((e) => e.source === id)
-      .map((e) => e.target);
-
-    // 3) Remove all edges touching the closed view node
-    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
-  }, [data, id, rf, getEdges, setEdges]);
+  // inside WidgetViewNode component
+  const handleClose = useCallback(() => {
+    if (data?.onClose) {
+      // App-level callback: (nodeId: string) => void
+      return data.onClose(id);
+    }
+  }, [data, id]);
 
   const onRun = useCallback(() => {
-    if (data?.onRun) return data.onRun(id);
+    if (data?.onRun) {
+      // you can pass widgetValue along later if you want
+      return data.onRun(id);
+    }
+    console.log("WidgetViewNode onRun value:", widgetValue);
   }, [data, id, widgetValue]);
 
   // if the widget definition changes (or node is created), sync default
   useEffect(() => {
     const w: any = data?.widget;
     if (!w) return;
-    console.log("Setting widget default value:", w["default-value"]);
-    setWidgetValue({ id: w.id, value: w["default-value"] });
-  }, [data?.widget]);
+
+    const out: WidgetOutput = {
+      id: w.id,
+      variable: w["variable"],
+      value: w["default-value"],
+    };
+    console.log("Setting widget default value:", out.value);
+
+    setWidgetValue(out);
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              data: {
+                ...(n.data as WidgetViewNodeData),
+                output: out,
+              },
+            }
+          : n
+      )
+    );
+  }, [data?.widget, data?.pushToken, id, setNodes]);
 
   return (
     <div className="wvnode">
@@ -62,17 +79,41 @@ const WidgetViewNode = memo(function WidgetViewNode({
         <button
           type="button"
           className="wvnode__iconBtn wvnode__iconBtn--close"
-          onClick={onClose}
+          onClick={handleClose}
         >
           ✕
         </button>
       </div>
 
       <div className="wvnode__body">
-        {renderWidgetFromWidgetDef(data?.widget, (wid, val) => {
-          setWidgetValue({ id: wid, value: val });
-          console.log("Widget value changed:", wid, val);
-        })}
+        {renderWidgetFromWidgetDef(
+          data?.widget,
+          widgetValue?.value, // current value drives the widget (controlled)
+          (wid, v, val) => {
+            const out: WidgetOutput = {
+              id: wid,
+              variable: v,
+              value: val,
+            };
+            setWidgetValue(out);
+            console.log("Widget value changed:", wid, v, val);
+
+            // mirror into the node's data.output
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === id
+                  ? {
+                      ...n,
+                      data: {
+                        ...(n.data as WidgetViewNodeData),
+                        output: out,
+                      },
+                    }
+                  : n
+              )
+            );
+          }
+        )}
       </div>
 
       <div className="wvnode__footer">

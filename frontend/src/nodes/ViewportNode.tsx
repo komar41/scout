@@ -312,7 +312,7 @@ const ViewportNode = memo(function ViewportNode({
 
     // 3) Remove all edges touching the closed view node
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
-  }, [data, id, rf, getEdges, setEdges]);
+  }, [data, id, rf, getEdges, setEdges, loadFromView]);
 
   const onRun = useCallback(() => {
     if (data?.onRun) return data.onRun(id);

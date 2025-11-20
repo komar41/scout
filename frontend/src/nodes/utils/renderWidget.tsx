@@ -11,13 +11,14 @@ import type { WidgetDef } from "./types";
 
 export function renderWidgetFromWidgetDef(
   widgetDef: WidgetDef | undefined,
-  onValueChange?: (id: string, value: any) => void
+  value: any,
+  onValueChange?: (id: string, variable: string, value: any) => void
 ): ReactNode {
   if (!widgetDef) return null;
 
   switch (widgetDef.type) {
     case "radio-group":
-      return renderRadioGroup(widgetDef, onValueChange);
+      return renderRadioGroup(widgetDef, value, onValueChange);
     default:
       return (
         <div style={{ fontSize: 12 }}>
@@ -29,28 +30,30 @@ export function renderWidgetFromWidgetDef(
 
 function renderRadioGroup(
   def: WidgetDef,
-  onValueChange?: (id: string, value: any) => void
+  value: any,
+  onValueChange?: (id: string, variable: string, value: any) => void
 ): ReactNode {
-  // your grammar fields:
-  // id, title, description, "default-value", items, layout
   const anyDef = def as any;
   const labelId = `${def.id}-label`;
   const items: string[] = anyDef.items ?? [];
   const layout: "horizontal" | "vertical" = anyDef.layout ?? "vertical";
   const defaultValue = anyDef["default-value"];
 
+  const currentValue = value ?? defaultValue;
+
   return (
     <FormControl style={{ alignItems: "center" }}>
       <FormLabel id={labelId}>{def.title}</FormLabel>
+
       <RadioGroup
         aria-labelledby={labelId}
-        defaultValue={defaultValue}
+        value={currentValue} // controlled
+        onChange={(e) => {
+          const v = (e.target as HTMLInputElement).value;
+          onValueChange?.(def.id, def.variable, v);
+        }}
         name={def.id}
         row={layout === "horizontal"}
-        onChange={(e) => {
-          const value = (e.target as HTMLInputElement).value;
-          onValueChange?.(def.id, value);
-        }}
       >
         {items.map((item) => (
           <FormControlLabel
@@ -68,6 +71,7 @@ function renderRadioGroup(
           />
         ))}
       </RadioGroup>
+
       {def.description && (
         <FormHelperText
           style={{

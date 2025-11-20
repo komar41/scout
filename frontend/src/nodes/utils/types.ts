@@ -65,6 +65,7 @@ export type ParsedInteraction = {
 
 export type WidgetDef = {
   id: string;
+  variable: string;
   type: string;
   title: string;
   description: string;
@@ -75,5 +76,6 @@ export type WidgetDef = {
 
 export type WidgetOutput = {
   id: string;
+  variable: string;
   value: any;
 };

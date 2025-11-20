@@ -42,10 +42,22 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
   // ---------- RUN ACTION ----------
   const handleRun = useCallback(async () => {
     const code = data?.code ?? "";
+    const widgetLines =
+      (data?.widgetOutputs ?? [])
+        .map((w) => {
+          const val =
+            typeof w.value === "string"
+              ? `"${w.value}"` // string literal
+              : JSON.stringify(w.value); // numbers, arrays, booleans
+          return `${w.variable} = ${val}`;
+        })
+        .join("\n") + "\n\n";
+
+    const finalCode = widgetLines + code;
+
     if (data?.onRun) {
-      return data.onRun(id, code);
+      return data.onRun(id, finalCode);
     }
-    console.log("[PyCodeEditorNode RUN]", id, code);
 
     try {
       setRunning(true);
@@ -59,7 +71,7 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
       const res = await fetch("http://localhost:5000/api/run-python", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: finalCode }),
       });
 
       const result = await res.json();
@@ -160,8 +172,15 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
 
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         id="viewport-in-1"
+        className="pcenode__handle"
+      />
+
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="viewport-in-2"
         className="pcenode__handle pcenode__handle--left"
       />
 

@@ -295,6 +295,7 @@ def run_python():
     payload = request.get_json() or {}
     code = payload.get("code", "")
 
+    print("Received code to run:\n", code)
     tmp_filename = None
     try:
         # Create a temp file to run code

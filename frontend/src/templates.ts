@@ -48,7 +48,7 @@ export const viewTemplate = {
           style: {
             fill: { feature: "height", colormap: "greys" },
             stroke_color: "#333333",
-            opacity: 0.8,
+            opacity: 1,
             "z-index": 1,
           },
         },
@@ -96,7 +96,8 @@ export const interactionTemplate = {
 
 export const widgetDefTemplate = {
   widget: {
-    id: "season_0",
+    id: "widget_0",
+    variable: "season",
     title: "Season",
     type: "radio-group",
     description: "(select season for shadow analysis)",
@@ -175,8 +176,6 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 // from deep_umbra import run_shadow_model
 
 // input = 'rasters-baselayer-0'
-// season = 'summer'
-// colormap = 'Reds'
 // output = 'acc-shadow-baselayer-0'
 
 // run_shadow_model(input, season, colormap, output)
