@@ -36,6 +36,7 @@ const WidgetViewNode = memo(function WidgetViewNode({
   const onRun = useCallback(() => {
     if (data?.onRun) {
       // you can pass widgetValue along later if you want
+      console.log("WidgetViewNode onRun value:", widgetValue);
       return data.onRun(id);
     }
     console.log("WidgetViewNode onRun value:", widgetValue);

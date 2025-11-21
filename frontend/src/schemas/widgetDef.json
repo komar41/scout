@@ -3,7 +3,7 @@
   "title": "Widget Schema",
 
   "type": "object",
-  "required": ["type", "id", "title", "description", "default-value"],
+  "required": ["type", "id", "title", "default-value"],
   "additionalProperties": true,
 
   "properties": {
@@ -13,7 +13,8 @@
         "radio-group",
         "slider",
         "datetime-picker",
-        "text-field",
+        "number-input",
+        "location-input",
         "text",
         "checkbox",
         "dropdown"

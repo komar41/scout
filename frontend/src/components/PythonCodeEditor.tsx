@@ -49,7 +49,7 @@ export default function PythonCodeEditor({
         gridTemplateRows: "1fr",
       }}
     >
-      <div style={{ overflow: "auto" }}>
+      <div>
         <CodeMirror
           value={text}
           onChange={handleChange}
