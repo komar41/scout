@@ -3,7 +3,7 @@
   "title": "Widget Schema",
 
   "type": "object",
-  "required": ["type", "id", "title", "default-value"],
+  "required": ["type", "id", "default-value"],
   "additionalProperties": true,
 
   "properties": {

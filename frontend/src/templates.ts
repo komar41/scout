@@ -96,13 +96,13 @@ export const interactionTemplate = {
 
 export const widgetDefTemplate = {
   widget: {
-    id: "widget_0",
+    id: "widget-0",
     variable: "season",
     title: "Season",
     type: "radio-group",
     description: "(select season for shadow analysis)",
     items: ["spring", "summer", "winter"],
-    layout: "horizontal",
+    orientation: "horizontal",
     "default-value": "summer",
   },
 };

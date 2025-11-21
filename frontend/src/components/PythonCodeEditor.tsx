@@ -43,7 +43,7 @@ export default function PythonCodeEditor({
         height: typeof height === "number" ? `${height}px` : height,
         border: "1px solid #e5e7eb",
         borderRadius: 8,
-        overflow: "hidden",
+        overflow: "auto",
         background: "transparent",
         display: "grid",
         gridTemplateRows: "1fr",

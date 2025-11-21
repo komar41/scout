@@ -126,7 +126,7 @@
   background: #fff;
   border: 1px solid #e5e7eb;
   box-shadow: 0 0 0 1px #f1f5f9 inset;
-  overflow: auto;
+  overflow: hidden;
 
   display: flex;
   flex-direction: column;
@@ -134,7 +134,7 @@
 
 .pcenode__editor-inner {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .pcenode__editor .cm-editor {
@@ -156,7 +156,7 @@
   border: 1px solid #e2e8f0;
 
   height: 60px;
-  overflow-y: hidden;
+  overflow-y: auto;
 
   text-align: left !important;
 }

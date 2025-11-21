@@ -10,6 +10,8 @@ import {
   Slider,
   Autocomplete,
   Checkbox,
+  FormGroup,
+  Typography,
 } from "@mui/material";
 import type { WidgetDef } from "./types";
 import { AddressAutofill } from "@mapbox/search-js-react";
@@ -52,6 +54,12 @@ export function renderWidgetFromWidgetDef(
     case "dropdown":
       return renderDropdownWidget(widgetDef, value, onValueChange);
 
+    case "checkbox":
+      return renderCheckboxWidget(widgetDef, value, onValueChange);
+
+    case "text":
+      return renderTextWidget(widgetDef, value);
+
     default:
       return (
         <div style={{ fontSize: 12 }}>
@@ -59,6 +67,159 @@ export function renderWidgetFromWidgetDef(
         </div>
       );
   }
+}
+
+export function renderTextWidget(
+  widget: WidgetDef,
+  value: any
+): React.ReactNode {
+  const text = value ?? widget["default-value"] ?? "";
+
+  const fontSize = widget["text-size"] ?? 12;
+  const color = widget.color ?? "#000";
+  const align = widget.align ?? "left";
+  const underline = widget.underline === true;
+  const italic = widget.italic === true;
+  const bold = widget.bold === true;
+
+  // Compute a single style string
+  const style: React.CSSProperties = {
+    fontSize: fontSize,
+    color: color,
+    textAlign: align as any,
+    fontWeight: bold ? 600 : 400,
+    fontStyle: italic ? "italic" : "normal",
+    textDecoration: underline ? "underline" : "none",
+    width: "100%",
+  };
+
+  return (
+    <div className="nodrag" style={{ width: "100%", textAlign: "center" }}>
+      <Typography style={style}>{text}</Typography>
+
+      {widget.description && (
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: "0.75rem",
+            color: "#666",
+            textAlign: "center",
+          }}
+        >
+          {widget.description}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function renderCheckboxWidget(
+  widget: WidgetDef,
+  value: any,
+  onValueChange?: (widgetId: string, variable: string, value: any) => void
+): React.ReactNode {
+  const variable = widget.variable ?? widget.id;
+  const mode = widget.mode === "group" ? "group" : "single";
+  const orientation =
+    widget.orientation === "horizontal" ? "horizontal" : "vertical";
+
+  // ----- SINGLE MODE -----
+  if (mode === "single") {
+    const checked =
+      typeof value === "boolean"
+        ? value
+        : typeof widget["default-value"] === "boolean"
+        ? widget["default-value"]
+        : false;
+
+    return (
+      <div className="nodrag" style={{ width: "100%" }}>
+        <FormControl>
+          <FormLabel>{widget.title ?? ""}</FormLabel>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={checked}
+                  onChange={(_, isChecked) => {
+                    onValueChange?.(widget.id, variable, isChecked);
+                  }}
+                />
+              }
+              label={widget.title ?? variable}
+            />
+          </FormGroup>
+          {widget.description && (
+            <FormHelperText
+              style={{
+                textAlign: "center",
+                paddingLeft: 0,
+                paddingRight: 0,
+              }}
+            >
+              {widget.description}
+            </FormHelperText>
+          )}
+        </FormControl>
+      </div>
+    );
+  }
+
+  // ----- GROUP MODE -----
+  const items: string[] = (widget as any).items ?? [];
+  const selected: string[] = Array.isArray(value)
+    ? value
+    : Array.isArray(widget["default-value"])
+    ? widget["default-value"]
+    : [];
+
+  const isHorizontal = orientation === "horizontal";
+
+  return (
+    <div className="nodrag" style={{ width: "100%" }}>
+      <FormControl component="fieldset">
+        <FormLabel>{widget.title ?? variable}</FormLabel>
+        <FormGroup row={isHorizontal}>
+          {items.map((item) => {
+            const checked = selected.includes(item);
+            return (
+              <FormControlLabel
+                key={item}
+                control={
+                  <Checkbox
+                    checked={checked}
+                    onChange={(_, isChecked) => {
+                      let next: string[];
+                      if (isChecked) {
+                        // add item
+                        next = checked ? selected : [...selected, item];
+                      } else {
+                        // remove item
+                        next = selected.filter((v) => v !== item);
+                      }
+                      onValueChange?.(widget.id, variable, next);
+                    }}
+                  />
+                }
+                label={item}
+              />
+            );
+          })}
+        </FormGroup>
+        {widget.description && (
+          <FormHelperText
+            style={{
+              textAlign: "center",
+              paddingLeft: 0,
+              paddingRight: 0,
+            }}
+          >
+            {widget.description}
+          </FormHelperText>
+        )}
+      </FormControl>
+    </div>
+  );
 }
 
 export function renderDropdownWidget(
@@ -101,13 +262,7 @@ export function renderDropdownWidget(
   }
 
   return (
-    <div
-      className="nodrag"
-      style={{ width: "100%", marginTop: "8px" }}
-      onMouseDown={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-    >
+    <div style={{ width: "100%", marginTop: "4px" }}>
       <Autocomplete
         options={items}
         multiple={multiple}
@@ -256,7 +411,7 @@ export function renderNumberInputWidget(
       : null;
 
   return (
-    <div style={{ width: "100%", marginTop: "8px" }}>
+    <div style={{ width: "100%", marginTop: "4px" }}>
       <MNumberField
         label={widget.title}
         helperText={widget.description}
@@ -283,15 +438,15 @@ export function renderSliderWidget(
       ? value
       : typeof widget["default-value"] === "number"
       ? widget["default-value"]
-      : widget.min; // safe fallback
+      : widget.min;
 
   const min = widget.min;
   const max = widget.max;
   const step = widget.step ?? 1;
 
-  const showValue = widget["show-value"] === true;
   const orientation =
     widget.orientation === "vertical" ? "vertical" : "horizontal";
+  const isVertical = orientation === "vertical";
 
   return (
     <div className="nodrag" style={{ width: "100%" }}>
@@ -301,36 +456,99 @@ export function renderSliderWidget(
           marginBottom: "4px",
           fontSize: "0.9rem",
           fontWeight: 500,
+          textAlign: "center",
         }}
       >
         {widget.title ?? variable}
       </div>
 
-      <Slider
-        value={currentVal}
-        min={min}
-        max={max}
-        step={step}
-        orientation={orientation}
-        valueLabelDisplay={showValue ? "on" : "off"}
-        onChange={(_, v) => {
-          if (typeof v === "number") {
-            onValueChange?.(widget.id, variable, v);
-          }
-        }}
-        sx={{
-          mt: 1,
-        }}
-      />
+      {isVertical ? (
+        // 🔹 Vertical layout: labels top/bottom, slider with fixed height
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            // important for vertical slider
+          }}
+        >
+          {/* max on top */}
+          <div
+            style={{
+              fontSize: "0.9rem",
+              color: "#666",
+              marginBottom: 10,
+            }}
+          >
+            {max}
+          </div>
 
-      {/* Optional centered description */}
+          <Slider
+            value={currentVal}
+            min={min}
+            max={max}
+            step={step}
+            orientation="vertical"
+            valueLabelDisplay="on"
+            onChange={(_, v) => {
+              if (typeof v === "number") {
+                onValueChange?.(widget.id, variable, v);
+              }
+            }}
+            sx={{ height: 200 }}
+          />
+
+          {/* min at bottom */}
+          <div
+            style={{
+              fontSize: "0.9rem",
+              color: "#666",
+              marginTop: 10,
+            }}
+          >
+            {min}
+          </div>
+        </div>
+      ) : (
+        // 🔹 Horizontal layout: labels left/right
+        <>
+          <Slider
+            value={currentVal}
+            min={min}
+            max={max}
+            step={step}
+            orientation="horizontal"
+            valueLabelDisplay="on"
+            onChange={(_, v) => {
+              if (typeof v === "number") {
+                onValueChange?.(widget.id, variable, v);
+              }
+            }}
+            sx={{ mt: 1 }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.9rem",
+              color: "#666",
+              marginTop: 0,
+            }}
+          >
+            <span>{min}</span>
+            <span>{max}</span>
+          </div>
+        </>
+      )}
+
       {widget.description && (
         <div
           style={{
-            marginTop: "-25px",
             fontSize: "0.75rem",
             color: "#666",
             textAlign: "center",
+            marginTop: 4,
           }}
         >
           {widget.description}
@@ -384,8 +602,8 @@ function renderDateTimePickerWidget(
         label={widget.title ?? variable}
         value={currentVal}
         onChange={(newVal: Dayjs | null) => {
-          const iso = newVal ? newVal.toISOString() : null;
-          onValueChange?.(widget.id, variable, iso);
+          const out = newVal ? newVal.format("YYYY-MM-DDTHH:mm:ss") : null;
+          onValueChange?.(widget.id, variable, out);
         }}
         format={fmt}
         slotProps={{

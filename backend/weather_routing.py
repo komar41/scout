@@ -1,9 +1,10 @@
 import osmnx as ox
 import networkx as nx
-
+import geopandas as gpd
 from load_static import DataLoader
 from calculate_isochrones import calculate_isochrones
 from weight_calculation import GNN_weight_calculations
+from datetime import datetime
 
 
 _data_loader = None
@@ -18,22 +19,96 @@ def get_data_loader(time=17):
 
     return _data_loader
 
-def calculate_weather_route(datafile, 
-                            origin, 
-                            destination,
-                            bbox,
+
+def time_to_global_index(time_string, start_time):
+    # convert string to datetime
+    dt = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%S")
+    
+    # difference in minutes
+    diff_minutes = int((dt - start_time).total_seconds() // 60)
+    
+    # index = 1, 2, 3, ... every 15 minutes
+    index = diff_minutes // 15 + 1
+    
+    return index
+
+def calculate_weather_route(datafile,
+                            input_area,
+                            origin_, 
+                            destination_,
+                            # bbox,
                             map_view_mode,
                             K_variable_paths,
-                            weather_conditions, # List of weather conditions to consider
-                            weather_weights, # Corresponding weights for each weather condition (Should be same length as weather_conditions and in the same order)
-                            time):
-    BASE_PATH = "./data/weather/"
-
-    ymax = bbox[0] 
-    ymin = bbox[1]
-    xmax = bbox[2]
-    xmin = bbox[3]
+                            # weather_conditions, # List of weather conditions to consider
+                            # weather_weights, # Corresponding weights for each weather condition (Should be same length as weather_conditions and in the same order)
+                            time_,
+                            rain=None,
+                            heat=None,
+                            wind=None,
+                            humidity=None):
     
+    BASE_PATH = "./data/weather/"
+    input_path = "./data/served/vector/%s_roads.geojson" % input_area
+    # get ymin, ymax, xmin, xmax from bbox from input
+
+    # bbox from input area file: -87.6600, 41.8600, -87.6000, 41.9000
+
+    # datafile: chicago, 
+    # input: baselayer-0, 
+    # origin_: {'lat': 41.87044, 'lon': -87.626412} 
+    # destination_: {'lat': 41.891375, 'lon': -87.630202}
+    # map_view_mode: 'Default weights',
+    # K_variable_paths: 1,
+    # time_ : '2025-07-06T00:00:00',
+    # rain: 0.85834,
+    # heat: 0.02850,
+    # wind: 0.01657,
+    # humidity: 0.09648
+
+    # Gives keyerror: length ....
+
+    # Other OD pairs tested: 
+    # (1):
+    # origin_: {'lat': 41.884573, 'lon': -87.652446}, destination_: {'lat': 41.889618, 'lon': -87.622991}
+    # 1000 West Randolph Street to 401 North Michigan Avenue
+    # keyerror: length ...
+
+    # (2):
+    # origin_: {'lat': 41.890233, 'lon': -87.637435}
+    # destination_: {'lat': 41.868464, 'lon': -87.624666}
+    # 350 West Hubbard Street to 1130 South Michigan Avenue
+    # No path error
+    
+    gdf = gpd.read_file(input_path)
+    xmin, ymin, xmax, ymax = gdf.total_bounds
+    # ymax = bbox[0] 
+    # ymin = bbox[1]
+    # xmax = bbox[2]
+    # xmin = bbox[3]
+    bbox = [ymax, ymin, xmax, xmin]
+    print(bbox)
+
+    weather_conditions = []
+    weather_weights = []
+
+    keyword_map = {
+        'rain': rain,
+        'heat': heat,
+        'wind': wind,
+        'humidity': humidity
+    }
+
+    for condition, weight in keyword_map.items():
+        if weight is not None:
+            weather_conditions.append(condition)
+            weather_weights.append(weight)
+
+    origin = (float(origin_['lat']), float(origin_['lon']))
+    destination = (float(destination_['lat']), float(destination_['lon']))
+
+    start = datetime.strptime("2025-07-06T00:00:00", "%Y-%m-%dT%H:%M:%S")
+    time = time_to_global_index(time_, start)
+        
     if (origin[0] < ymin or origin[1] >     ymax or 
         origin[1] < xmin or origin[1] > xmax or
         destination[0] < ymin or destination[0] > ymax or
@@ -73,13 +148,13 @@ def calculate_weather_route(datafile,
     trip_times_seconds = calculate_isochrones(G, orig_node, route)
 
     # In the optimized mode we always use the default weights
-    if map_view_mode == "Optimized":
+    if map_view_mode == "Default weights":
         rain_weight = 0.85834
         heat_weight = 0.02850
         humidity_weight = 0.09648
         wind_weight = 0.01657
     # In maps mode we are able to create a (for example) rain + heat aware path, so we need to check that the sum of weights is less than 1.0
-    elif map_view_mode == "Maps":
+    elif map_view_mode == "Custom weights":
         if sum(weather_weights) > 1.0:
             raise ValueError("In 'Maps' mode, the sum of weather weights must be 1.0")
     # In variable mode we just assign the weights as per user input as long as they are between 0 and 1
@@ -122,7 +197,7 @@ def calculate_weather_route(datafile,
     print(f"Calculating routes for map view mode: {map_view_mode}")
     
     # Single map with single route!! 
-    if map_view_mode == "Optimized":
+    if map_view_mode == "Default weights":
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         route_total = nx.shortest_path(G, orig_node, dest_node, weight="total_weight")
         routes_data.append({
@@ -136,7 +211,7 @@ def calculate_weather_route(datafile,
                         'route_index': 1
                     })
     
-    elif map_view_mode == "Variable":
+    elif map_view_mode == "Custom weights":
 
         # For future reference, the k_shortest_paths and shortest_paths are the ones that acually return a list of osm ID's
         for weight in weather_conditions:
@@ -166,7 +241,7 @@ def calculate_weather_route(datafile,
 
         
     # With this you are able to compare a only rain aware path, a only heat aware path and a heat + rain aware path
-    elif map_view_mode == "Maps": 
+    elif map_view_mode == "Single-factor weights": 
     
         # For future reference, the k_shortest_paths and shortest_paths are the ones that acually return a list of osm ID's
         for weight in weather_conditions:
