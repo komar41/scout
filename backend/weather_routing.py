@@ -5,7 +5,10 @@ from load_static import DataLoader
 from calculate_isochrones import calculate_isochrones
 from weight_calculation import GNN_weight_calculations
 from datetime import datetime
-
+from shapely.geometry import LineString, mapping
+import json
+import os
+from collections import defaultdict
 
 _data_loader = None
 
@@ -33,7 +36,7 @@ def time_to_global_index(time_string, start_time):
     return index
 
 def calculate_weather_route(datafile,
-                            input_area,
+                            input,
                             origin_, 
                             destination_,
                             # bbox,
@@ -48,7 +51,7 @@ def calculate_weather_route(datafile,
                             humidity=None):
     
     BASE_PATH = "./data/weather/"
-    input_path = "./data/served/vector/%s_roads.geojson" % input_area
+    input_path = "./data/served/vector/%s_roads.geojson" % input
     # get ymin, ymax, xmin, xmax from bbox from input
 
     # bbox from input area file: -87.6600, 41.8600, -87.6000, 41.9000
@@ -79,14 +82,14 @@ def calculate_weather_route(datafile,
     # 350 West Hubbard Street to 1130 South Michigan Avenue
     # No path error
     
-    # gdf = gpd.read_file(input_path)
-    xmin, ymin, xmax, ymax = [-87.6600, 41.8600, -87.6000, 41.9000]
+    gdf = gpd.read_file(input_path)
+    # xmin, ymin, xmax, ymax = [-87.6600, 41.8600, -87.6000, 41.9000]
+    xmin, ymin, xmax, ymax = gdf.total_bounds
     # ymax = bbox[0] 
     # ymin = bbox[1]
     # xmax = bbox[2]
     # xmin = bbox[3]
     bbox = [ymax, ymin, xmax, xmin]
-    print(bbox)
 
     weather_conditions = []
     weather_weights = []
@@ -155,6 +158,10 @@ def calculate_weather_route(datafile,
         wind_weight = 0.01657
     # In maps mode we are able to create a (for example) rain + heat aware path, so we need to check that the sum of weights is less than 1.0
     elif map_view_mode == "Custom weights":
+        rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0
+        heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0
+        wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0
+        humidity_weight = weather_weights[weather_conditions.index('humidity')] if 'humidity' in weather_conditions else 0
         if sum(weather_weights) > 1.0:
             raise ValueError("In 'Maps' mode, the sum of weather weights must be 1.0")
     # In variable mode we just assign the weights as per user input as long as they are between 0 and 1
@@ -198,12 +205,12 @@ def calculate_weather_route(datafile,
         route_total = nx.shortest_path(G, orig_node, dest_node, weight="total_weight")
         routes_data.append({
                         'route': route_fastest,
-                        'weight_type': "quickest_path",
+                        'weight_type': "fastest",
                         'route_index': 0
                     })
         routes_data.append({
                         'route': route_total,
-                        'weight_type': "total_weight",
+                        'weight_type': "weighted",
                         'route_index': 1
                     })
     
@@ -232,7 +239,7 @@ def calculate_weather_route(datafile,
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         routes_data.append({
             'route': route_fastest,
-            'weight_type': 'quickest_path',
+            'weight_type': 'fastest',
         })
 
         
@@ -264,18 +271,62 @@ def calculate_weather_route(datafile,
         })
         
     # instead we will create linestrings and store to geojson. Then fetch it on frontend whenever needed.
-    route_coords = []
-    index = 0
-    for route in routes_data:
-        route_data_coords = []
-        for node_id in route['route']:
-            node = G.nodes[node_id]
-            route_data_coords.append((node['y'], node['x']))
-        route_coords.append({
-            'route_index': index,
-            'weight_type': route['weight_type'],
-            'coordinates': route_data_coords
-        })
-        index += 1
+    # route_coords = []
+    # index = 0
+    # for route in routes_data:
+    #     route_data_coords = []
+    #     for node_id in route['route']:
+    #         node = G.nodes[node_id]
+    #         route_data_coords.append((node['y'], node['x']))
+    #     route_coords.append({
+    #         'route_index': index,
+    #         'weight_type': route['weight_type'],
+    #         'coordinates': route_data_coords
+    #     })
+    #     index += 1
 
-    return route_coords
+    # return route_coords
+
+
+    out_dir = "./data/served/vector/"
+    by_weight = defaultdict(list)
+
+    for fname in os.listdir(out_dir):
+        # keyword_map keys
+        if fname.startswith(f"{input}_fastest") or fname.startswith(f"{input}_weighted") or fname.startswith(f"{input}_rain") or fname.startswith(f"{input}_heat") or fname.startswith(f"{input}_wind") or fname.startswith(f"{input}_humidity"):
+            os.remove(os.path.join(out_dir, fname))
+
+    for route in routes_data:
+        weight_type = route["weight_type"]
+
+        coords = [
+            [G.nodes[node_id]["x"], G.nodes[node_id]["y"]]  # [lon, lat]
+            for node_id in route["route"]
+        ]
+
+        feature = {
+            "type": "Feature",
+            "properties": {
+                "weight_type": weight_type,
+                # no route_index needed
+            },
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords,
+            },
+        }
+
+        by_weight[weight_type].append(feature)
+
+    # Now write one file per weight_type
+    for weight_type, features in by_weight.items():
+        feature_collection = {
+            "type": "FeatureCollection",
+            "features": features,
+        }
+
+        fname = f"{input}_{weight_type}_roads.geojson"
+        with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
+            json.dump(feature_collection, f)
+
+    return

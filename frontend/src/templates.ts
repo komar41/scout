@@ -22,7 +22,7 @@ export const physicalLayerTemplate = {
     datafile: "chicago",
     region_of_interest: {
       type: "bbox",
-      value: [-87.64, 41.88, -87.625, 41.89],
+      value: [-87.66, 41.86, -87.6, 41.9],
     },
     layers: [
       {

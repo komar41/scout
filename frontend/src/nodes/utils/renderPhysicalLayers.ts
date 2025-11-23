@@ -297,6 +297,8 @@ export async function renderPhysicalLayersForViews(opts: {
       return za - zb;
     });
 
+    console.log(layers);
+
     for (const lyr of layers) {
       const tag = lyr.tag;
       const url = `http://127.0.0.1:5000/generated/vector/${plId}_${tag}.geojson`;
@@ -322,10 +324,12 @@ export async function renderPhysicalLayersForViews(opts: {
 
       const strokeColor = lyr.stroke?.color ?? "#222";
       const strokeWidth = lyr.stroke?.width ?? 1;
+      const strokeOpacity = lyr.stroke?.["stroke-opacity"] ?? 1;
       const fillOpacity = lyr.opacity ?? 1;
       const fallbackFill = "#6aa9ff";
 
-      const gTag = getOrCreateTagGroup(tag);
+      const nTag = `${plId}::${tag}`;
+      const gTag = getOrCreateTagGroup(nTag);
 
       const keyFn = (d: any, i: number) =>
         d.id ?? d.properties?.id ?? d.properties?.osm_id ?? i;
@@ -342,14 +346,27 @@ export async function renderPhysicalLayersForViews(opts: {
         .merge(sel as any)
         .attr("d", path as any)
         .style("fill", (d: any) => {
+          const geomType = d?.geometry?.type;
+
+          const isLine =
+            geomType === "LineString" || geomType === "MultiLineString";
+
+          if (isLine) return "none"; // 🔑 no fill for routes
+
           const v = attr ? Number(d?.properties?.[attr]) : undefined;
           return attr && colorScale && Number.isFinite(v)
             ? colorScale(v!)
             : fallbackFill;
         })
-        .style("fill-opacity", fillOpacity)
+        .style("fill-opacity", (d: any) => {
+          const geomType = d?.geometry?.type;
+          const isLine =
+            geomType === "LineString" || geomType === "MultiLineString";
+          return isLine ? 0 : fillOpacity;
+        })
         .style("stroke", strokeColor)
         .style("stroke-width", strokeWidth)
+        .style("stroke-opacity", strokeOpacity)
         .style("vector-effect", "non-scaling-stroke")
         .style("pointer-events", "all");
 
