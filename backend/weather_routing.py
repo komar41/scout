@@ -170,23 +170,23 @@ def calculate_weather_route(datafile,
             humidity_weight < 0 or humidity_weight > 1):
             raise ValueError("In 'Variable' mode, each weather weight must be between 0 and 1.")
     
-    # GNN_weight_calculations(G, rain_lats, rain_lons,
-    #                         rain_ds=rain_ds,
-    #                         heat_ds=heat_ds,
-    #                         wind_speed_ds=wind_speed_ds,
-    #                         wind_dir_ds=wind_dir_ds,
-    #                         humidity_ds=humidity_ds,
-    #                         rain_data=rain_data,
-    #                         heat_data=heat_data,
-    #                         wind_speed_data=wind_speed_data,
-    #                         wind_dir_data=wind_dir_data,
-    #                         humidity_data=humidity_data,
-    #                         time=time,
-    #                         trip_time_seconds=trip_times_seconds,
-    #                         rain_weight=rain_weight,
-    #                         heat_weight=heat_weight,
-    #                         wind_weight=wind_weight,
-    #                         humidity_weight=humidity_weight)
+    GNN_weight_calculations(G, rain_lats, rain_lons,
+                            rain_ds=rain_ds,
+                            heat_ds=heat_ds,
+                            wind_speed_ds=wind_speed_ds,
+                            wind_dir_ds=wind_dir_ds,
+                            humidity_ds=humidity_ds,
+                            rain_data=rain_data,
+                            heat_data=heat_data,
+                            wind_speed_data=wind_speed_data,
+                            wind_dir_data=wind_dir_data,
+                            humidity_data=humidity_data,
+                            time=time,
+                            trip_time_seconds=trip_times_seconds,
+                            rain_weight=rain_weight,
+                            heat_weight=heat_weight,
+                            wind_weight=wind_weight,
+                            humidity_weight=humidity_weight)
     
     routes_data = []
     
