@@ -78,6 +78,7 @@ def extract_roads(output_filename):
 
     G = ox.add_edge_speeds(G)        # adds edge attribute 'speed_kph'
     G = ox.add_edge_travel_times(G)  # adds edge attribute 'travel_time' (seconds)
+    G = ox.distance.add_edge_lengths(G)   # adds 'length' attribute in meters
 
     # convert to geodataframe
     edges = ox.convert.graph_to_gdfs(G, nodes=False, edges=True)

@@ -132,6 +132,8 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 // -------------------------------------------
 
 // from download_data import download_osm_data
+// from download_data import extract_buildings
+// from download_data import extract_roads
 
 // input_filename = "north-america-latest"
 // location = "Los Angeles, USA"
@@ -141,18 +143,7 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 //   input_filename, location, output_filename
 // )
 
-// -------------------------------------------
-// Extract building footprints:
-// -------------------------------------------
-
-// from download_data import extract_buildings
 // extract_buildings("la")
-
-// -------------------------------------------
-// Extract road networks:
-// -------------------------------------------
-
-// from download_data import extract_roads
 // extract_roads("la")
 
 // -------------------------------------------

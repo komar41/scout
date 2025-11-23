@@ -79,8 +79,8 @@ def calculate_weather_route(datafile,
     # 350 West Hubbard Street to 1130 South Michigan Avenue
     # No path error
     
-    gdf = gpd.read_file(input_path)
-    xmin, ymin, xmax, ymax = gdf.total_bounds
+    # gdf = gpd.read_file(input_path)
+    xmin, ymin, xmax, ymax = [-87.6600, 41.8600, -87.6000, 41.9000]
     # ymax = bbox[0] 
     # ymin = bbox[1]
     # xmax = bbox[2]
@@ -170,27 +170,23 @@ def calculate_weather_route(datafile,
             humidity_weight < 0 or humidity_weight > 1):
             raise ValueError("In 'Variable' mode, each weather weight must be between 0 and 1.")
     
-    
-
-    print("Weather weights: ", rain_weight, heat_weight, wind_weight, humidity_weight)
-
-    GNN_weight_calculations(G, rain_lats, rain_lons,
-                            rain_ds=rain_ds,
-                            heat_ds=heat_ds,
-                            wind_speed_ds=wind_speed_ds,
-                            wind_dir_ds=wind_dir_ds,
-                            humidity_ds=humidity_ds,
-                            rain_data=rain_data,
-                            heat_data=heat_data,
-                            wind_speed_data=wind_speed_data,
-                            wind_dir_data=wind_dir_data,
-                            humidity_data=humidity_data,
-                            time=time,
-                            trip_time_seconds=trip_times_seconds,
-                            rain_weight=rain_weight,
-                            heat_weight=heat_weight,
-                            wind_weight=wind_weight,
-                            humidity_weight=humidity_weight)
+    # GNN_weight_calculations(G, rain_lats, rain_lons,
+    #                         rain_ds=rain_ds,
+    #                         heat_ds=heat_ds,
+    #                         wind_speed_ds=wind_speed_ds,
+    #                         wind_dir_ds=wind_dir_ds,
+    #                         humidity_ds=humidity_ds,
+    #                         rain_data=rain_data,
+    #                         heat_data=heat_data,
+    #                         wind_speed_data=wind_speed_data,
+    #                         wind_dir_data=wind_dir_data,
+    #                         humidity_data=humidity_data,
+    #                         time=time,
+    #                         trip_time_seconds=trip_times_seconds,
+    #                         rain_weight=rain_weight,
+    #                         heat_weight=heat_weight,
+    #                         wind_weight=wind_weight,
+    #                         humidity_weight=humidity_weight)
     
     routes_data = []
     
