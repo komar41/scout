@@ -27,8 +27,17 @@ export function parseView(raw: any): ParsedView[] {
               }
             : undefined,
           stroke: style.stroke_color
-            ? { color: style.stroke_color, width: style.stroke_width || 1.2 }
+            ? {
+                color: style.stroke_color,
+                width: style.stroke_width || 1,
+                "stroke-opacity":
+                  style.stroke_opacity ??
+                  style["stroke-opacity"] ??
+                  style.strokeOpacity ??
+                  1,
+              }
             : undefined,
+
           opacity: style.opacity ?? 1,
 
           zIndex:
