@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import "./ViewportNode.css";
 import restartPng from "../assets/restart.png";
 import persistPng from "../assets/update-data.png";
+import mapPng from "../assets/map.png";
 import checkPng from "../assets/check-mark.png";
 import * as d3 from "d3";
 import { ViewDef, InteractionDef } from "./utils/types";
@@ -30,6 +31,9 @@ const ViewportNode = memo(function ViewportNode({
 }: NodeProps<ViewportNode>) {
   const [persisting, setPersisting] = useState(false);
   const [persistSuccess, setPersistSuccess] = useState(false);
+  // true false
+  const [showBasemap, setShowBasemap] = useState(false);
+  const baseLayerRef = useRef<L.TileLayer | null>(null);
 
   const { getEdges, setEdges } = useReactFlow();
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -147,7 +151,10 @@ const ViewportNode = memo(function ViewportNode({
         (path as any).pointRadius(pointRadius);
       }
 
-      g.selectAll<SVGPathElement, any>("path.geom").attr("d", path as any);
+      g.selectAll<SVGPathElement, any>("path.geom, path.geom-border").attr(
+        "d",
+        path as any
+      );
     });
   }, [makeLeafletPath]);
 
@@ -202,7 +209,6 @@ const ViewportNode = memo(function ViewportNode({
   // Init Leaflet + SVG overlay once
   useEffect(() => {
     if (!mapRef.current || leafletRef.current) return;
-
     const map = L.map(mapRef.current, {
       attributionControl: false,
       preferCanvas: true,
@@ -215,7 +221,7 @@ const ViewportNode = memo(function ViewportNode({
     map.setView(center, zoom);
 
     // white background (tile hidden via opacity: 0)
-    L.tileLayer(
+    const baseLayer = L.tileLayer(
       "https://cartodb-basemaps-a.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",
       {
         maxZoom: 19,
@@ -223,6 +229,8 @@ const ViewportNode = memo(function ViewportNode({
         opacity: 0,
       }
     ).addTo(map);
+
+    baseLayerRef.current = baseLayer;
 
     // SVG overlay
     const svgLayer = L.svg().addTo(map);
@@ -279,6 +287,12 @@ const ViewportNode = memo(function ViewportNode({
       }
     };
   }, [data?.center, data?.zoom, clearAllSvgLayers, redrawAll]);
+
+  useEffect(() => {
+    if (baseLayerRef.current) {
+      baseLayerRef.current.setOpacity(showBasemap ? 0.5 : 0);
+    }
+  }, [showBasemap]);
 
   // Keep map sized
   useEffect(() => {
@@ -387,6 +401,16 @@ const ViewportNode = memo(function ViewportNode({
               className="vpnode__actionIcon"
             />
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowBasemap((b) => !b)}
+          title="update"
+          aria-label="update"
+          className="vpnode__actionBtn"
+        >
+          <img src={mapPng} alt="update" className="vpnode__actionIcon" />
         </button>
       </div>
 

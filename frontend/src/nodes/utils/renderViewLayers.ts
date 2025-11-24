@@ -131,7 +131,7 @@ async function renderRasterForView(opts: {
     maxY = Math.max(maxY, y);
 
     const url = `http://127.0.0.1:5000/generated/raster/${layerId}/${name}?v=${cacheBust}`;
-    console.log("raster tile url:", url);
+    // console.log("raster tile url:", url);
 
     const bounds = tileBoundsFromXYZ(x, y, z, map);
 
@@ -199,7 +199,7 @@ export async function renderLayers(opts: {
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
   const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
 
-  console.log(physicalViews, thematicViews);
+  // console.log(physicalViews, thematicViews);
   if (!physicalViews.length && !thematicViews.length) {
     return;
   }
@@ -327,8 +327,41 @@ export async function renderLayers(opts: {
 
       sel.exit().remove();
 
-      const enter = sel.enter().append("path").attr("class", "geom");
+      if (isLineLayer) {
+        if (lyr.border) {
+          const borderColor = lyr.border?.color ?? "#fff"; // or whatever default
+          const borderWidth = lyr.border?.width ?? 0;
 
+          // console.log(
+          //   `Rendering borders for line layer ${nTag}:`,
+          //   borderColor,
+          //   borderWidth
+          // );
+          const borderSel = gTag
+            .selectAll<SVGPathElement, any>("path.geom-border")
+            .data(fc.features, keyFn);
+
+          borderSel.exit().remove();
+
+          const borderEnter = borderSel
+            .enter()
+            .append("path")
+            .attr("class", "geom-border");
+
+          borderEnter
+            .merge(borderSel as any)
+            .attr("d", path as any)
+            .style("fill", "none")
+            .style("stroke", borderColor)
+            .style("stroke-width", borderWidth) // slightly thicker than inner line
+            .style("stroke-opacity", layerOpacity)
+            .style("vector-effect", "non-scaling-stroke")
+            .style("pointer-events", "none"); // so clicks go to the inner path
+        }
+      }
+
+      const enter = sel.enter().append("path").attr("class", "geom");
+      // console.log(strokeColor, strokeWidth);
       const geomSel = enter
         .merge(sel as any)
         .attr("d", path as any)

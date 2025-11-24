@@ -59,6 +59,13 @@ export function parseView(raw: any): ParsedView[] {
             color: style["stroke-color"] ?? "#000",
             width: style["stroke-width"] ?? 1,
           };
+
+          if (style["border-color"] || style["border-width"]) {
+            layer.border = {
+              color: style["border-color"] ?? "#ddd",
+              width: style["border-width"] ?? 1,
+            };
+          }
         }
 
         if (isPoint) {
@@ -83,6 +90,7 @@ export function parseView(raw: any): ParsedView[] {
               width: style["stroke-width"] ?? 1,
             };
           }
+
           layer.size = style["radius"] ?? 4; // radius in px
         }
 

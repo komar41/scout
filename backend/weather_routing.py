@@ -40,11 +40,11 @@ def calculate_weather_route(datafile,
                             origin_, 
                             destination_,
                             # bbox,
-                            map_view_mode,
-                            K_variable_paths,
+                            mode="Default weights",
+                            K = 1,
                             # weather_conditions, # List of weather conditions to consider
                             # weather_weights, # Corresponding weights for each weather condition (Should be same length as weather_conditions and in the same order)
-                            time_,
+                            time_="2025-07-06T00:00:00",
                             rain=None,
                             heat=None,
                             wind=None,
@@ -151,13 +151,13 @@ def calculate_weather_route(datafile,
     trip_times_seconds = calculate_isochrones(G, orig_node, route)
 
     # In the optimized mode we always use the default weights
-    if map_view_mode == "Default weights":
+    if mode == "Default weights":
         rain_weight = 0.85834
         heat_weight = 0.02850
         humidity_weight = 0.09648
         wind_weight = 0.01657
     # In maps mode we are able to create a (for example) rain + heat aware path, so we need to check that the sum of weights is less than 1.0
-    elif map_view_mode == "Custom weights":
+    elif mode == "Custom weights":
         rain_weight = weather_weights[weather_conditions.index('rain')] if 'rain' in weather_conditions else 0
         heat_weight = weather_weights[weather_conditions.index('heat')] if 'heat' in weather_conditions else 0
         wind_weight = weather_weights[weather_conditions.index('wind')] if 'wind' in weather_conditions else 0
@@ -197,10 +197,10 @@ def calculate_weather_route(datafile,
     
     routes_data = []
     
-    print(f"Calculating routes for map view mode: {map_view_mode}")
+    print(f"Calculating routes for map view mode: {mode}")
     
     # Single map with single route!! 
-    if map_view_mode == "Default weights":
+    if mode == "Default weights":
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         route_total = nx.shortest_path(G, orig_node, dest_node, weight="total_weight")
         routes_data.append({
@@ -226,7 +226,7 @@ def calculate_weather_route(datafile,
                         "humidity_exposure": nx.path_weight(G, route_total, weight='humidity_weight') if 'humidity' in weather_conditions else 0,    
                     })
     
-    elif map_view_mode == "Custom weights":
+    elif mode == "Custom weights":
 
         # For future reference, the k_shortest_paths and shortest_paths are the ones that acually return a list of osm ID's
         for weight in weather_conditions:
@@ -234,10 +234,10 @@ def calculate_weather_route(datafile,
             try:
                 print(f"Calculating route optimized for {weight}...")
                 # Use Yen's algorithm for k-shortest paths
-                k_paths = list(ox.routing.k_shortest_paths(G, orig_node, dest_node, k=(K_variable_paths), weight=f"{weight}_weight"))
+                k_paths = list(ox.routing.k_shortest_paths(G, orig_node, dest_node, k=(K), weight=f"{weight}_weight"))
                         
                 # Add each route to routes_data which will be processed later
-                for i in range(K_variable_paths):
+                for i in range(K):
                     route = k_paths[i]
                     routes_data.append({
                         'route': route,
@@ -269,9 +269,10 @@ def calculate_weather_route(datafile,
 
         
     # With this you are able to compare a only rain aware path, a only heat aware path and a heat + rain aware path
-    elif map_view_mode == "Single-factor weights": 
+    elif mode == "Single-factor weights": 
     
         # For future reference, the k_shortest_paths and shortest_paths are the ones that acually return a list of osm ID's
+        i = 1
         for weight in weather_conditions:
             # calculate route optimized for every selected weight
             try:
@@ -284,6 +285,7 @@ def calculate_weather_route(datafile,
                 routes_data.append({
                     'route': route,
                     'weight_type': "%s-aware-route"%weight,
+                    'route_index': i,
                     "distance": nx.path_weight(G, route, weight='length') / 1000,  # in km
                     "duration": nx.path_weight(G, route, weight='travel_time') / 60,  # in minutes
                     "rain_exposure": nx.path_weight(G, route, weight='rain_weight') if 'rain' in weather_conditions else 0,
@@ -292,6 +294,7 @@ def calculate_weather_route(datafile,
                     "humidity_exposure": nx.path_weight(G, route, weight='humidity_weight') if 'humidity' in weather_conditions else 0,    
                     
                 })
+                i += 1
                 
             except Exception as e:
                 print(f"Could not calculate route for {weight}: {e}")
@@ -299,7 +302,14 @@ def calculate_weather_route(datafile,
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         routes_data.append({
             'route': route_fastest,
+            'route_index': 0,
             'weight_type': 'fastest-route',
+            "distance": nx.path_weight(G, route_fastest, weight='length') / 1000,  # in km
+            "duration": nx.path_weight(G, route_fastest, weight='travel_time') / 60,  # in minutes
+            "rain_exposure": nx.path_weight(G, route_fastest, weight='rain_weight') if 'rain' in weather_conditions else 0,
+            "heat_exposure": nx.path_weight(G, route_fastest, weight='heat_weight') if 'heat' in weather_conditions else 0,
+            "wind_exposure": nx.path_weight(G, route_fastest, weight='wind_weight') if 'wind' in weather_conditions else 0,
+            "humidity_exposure": nx.path_weight(G, route_fastest, weight='humidity_weight') if 'humidity' in weather_conditions else 0,
         })
         
     # instead we will create linestrings and store to geojson. Then fetch it on frontend whenever needed.

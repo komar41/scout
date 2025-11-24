@@ -21,6 +21,7 @@ export type ParsedLayer = {
   fill?: { attribute?: string; colormap?: string };
   stroke?: { color?: string; width?: number };
   opacity?: number;
+  border?: { color?: string; width?: number };
 };
 
 export type ParsedView = {
