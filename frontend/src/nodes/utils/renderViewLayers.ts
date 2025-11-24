@@ -273,12 +273,13 @@ export async function renderLayers(opts: {
       const isPolygonLayer =
         geomType === "polygon" || geomType === "multipolygon";
       const isLineLayer = geomType === "linestring";
+      const isPointLayer = geomType === "point";
 
       let attr: string | undefined;
       let colormapName: string | undefined;
       let solidFill: string | undefined;
 
-      if (isPolygonLayer && lyr.fill) {
+      if ((isPolygonLayer || isPointLayer) && lyr.fill) {
         if (typeof lyr.fill === "string") {
           // solid color fill
           solidFill = lyr.fill;
@@ -299,8 +300,23 @@ export async function renderLayers(opts: {
       const strokeWidth = lyr.stroke?.width ?? 1;
       const layerOpacity = lyr.opacity ?? 1;
 
+      // point radius from parser (default 4px)
+
+      if (isPointLayer && typeof (path as any).pointRadius === "function") {
+        // d3-geo point rendering uses this
+        const pointRadius = (lyr as any).size ?? 4;
+        (path as any).pointRadius(pointRadius);
+      }
+
       const nTag = `${plId}::${tag}`;
       const gTag = getOrCreateTagGroup(nTag);
+
+      const configuredRadius = (lyr as any).size ?? 4; // radius in px
+
+      // Store metadata for redrawAll
+      (gTag as any)._geomType = geomType;
+      (gTag as any)._isPointLayer = isPointLayer;
+      (gTag as any)._pointRadius = configuredRadius;
 
       const keyFn = (d: any, i: number) =>
         d.id ?? d.properties?.id ?? d.properties?.osm_id ?? i;
@@ -326,7 +342,7 @@ export async function renderLayers(opts: {
           // Lines: no fill
           if (isLineFeature) return "none";
 
-          // Polygon: solid fill color from parser
+          // Solid fill from parser (polygons or points)
           if (solidFill) return solidFill;
 
           // Polygon: attribute-based colormap from parser

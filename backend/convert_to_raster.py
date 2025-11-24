@@ -21,8 +21,8 @@ from pathlib import Path
 
 os.environ['USE_PYGEOS'] = '0'
 
-import warnings
-np.warnings = warnings
+# import warnings
+# np.warnings = warnings
 
 transformer = Transformer.from_crs(3395, 4326)
 invtransformer = Transformer.from_crs(4326,3395)

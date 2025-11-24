@@ -328,6 +328,7 @@ def calculate_weather_route(datafile,
         if fname.startswith(f"{input}_fastest-route") or fname.startswith(f"{input}_weighted-route") or fname.startswith(f"{input}_rain-aware-route") or fname.startswith(f"{input}_heat-aware-route") or fname.startswith(f"{input}_wind-aware-route") or fname.startswith(f"{input}_humidity-aware-route"):
             os.remove(os.path.join(out_dir, fname))
 
+    
     for route in routes_data:
         weight_type = route["weight_type"]
 
@@ -367,5 +368,53 @@ def calculate_weather_route(datafile,
         fname = f"{input}_{weight_type}.geojson"
         with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
             json.dump(feature_collection, f)
+
+    # Finally save origin and destination as separate geojson files
+
+    coords = [
+        [G.nodes[node_id]["x"], G.nodes[node_id]["y"]]
+        for node_id in routes_data[0]["route"]
+    ]
+    
+    start_point = coords[0]
+    end_point = coords[-1]
+
+    origin_feature = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "type": "origin"
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [start_point[0], start_point[1]],  
+                },
+            }
+        ],
+    }
+
+    destination_feature = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "type": "destination"
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [end_point[0], end_point[1]],
+                },
+            }
+        ],
+    }
+
+    with open(os.path.join(out_dir, f"{input}_origin.geojson"), "w", encoding="utf-8") as f:
+        json.dump(origin_feature, f)
+
+    with open(os.path.join(out_dir, f"{input}_destination.geojson"), "w", encoding="utf-8") as f:
+        json.dump(destination_feature, f)
 
     return
