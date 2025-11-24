@@ -134,8 +134,19 @@ const ViewportNode = memo(function ViewportNode({
   const redrawAll = useCallback(() => {
     const map = leafletRef.current;
     if (!map) return;
-    const path = makeLeafletPath(map);
+
     gByTagRef.current.forEach((g) => {
+      const geomType = (g as any)._geomType;
+      const isPointLayer = (g as any)._isPointLayer;
+      const configuredRadius = (g as any)._pointRadius;
+
+      const path = makeLeafletPath(map);
+
+      if (isPointLayer && typeof (path as any).pointRadius === "function") {
+        const pointRadius = configuredRadius ?? 4;
+        (path as any).pointRadius(pointRadius);
+      }
+
       g.selectAll<SVGPathElement, any>("path.geom").attr("d", path as any);
     });
   }, [makeLeafletPath]);

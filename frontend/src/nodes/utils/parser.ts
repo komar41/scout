@@ -22,7 +22,7 @@ export function parseView(raw: any): ParsedView[] {
         const style = lyr.style;
         const geomType = lyr["geom-type"];
         const isPolygon = geomType === "polygon" || geomType === "multipolygon";
-
+        const isPoint = geomType === "point";
         const isLine = geomType === "linestring";
 
         const layer: any = {
@@ -35,16 +35,15 @@ export function parseView(raw: any): ParsedView[] {
         if (isPolygon) {
           let fillSpec: any;
 
-          if (style.fill) {
-            if (typeof style.fill === "object") {
-              fillSpec = {
-                attribute: style.fill.feature,
-                colormap: style.fill.colormap ?? "viridis",
-              };
-            } else {
-              fillSpec = style.fill ?? "#6aa9ff";
-            }
+          if (typeof style.fill === "object") {
+            fillSpec = {
+              attribute: style.fill.feature,
+              colormap: style.fill.colormap ?? "viridis",
+            };
+          } else {
+            fillSpec = style.fill ?? "#6aa9ff";
           }
+
           layer.fill = fillSpec;
 
           if (style["stroke-color"] || style["stroke-width"]) {
@@ -60,6 +59,31 @@ export function parseView(raw: any): ParsedView[] {
             color: style["stroke-color"] ?? "#000",
             width: style["stroke-width"] ?? 1,
           };
+        }
+
+        if (isPoint) {
+          let fillSpec: any;
+
+          if (typeof style.fill === "object") {
+            // attribute-based point color
+            fillSpec = {
+              attribute: style.fill.feature,
+              colormap: style.fill.colormap ?? "viridis",
+            };
+          } else {
+            // solid color
+            fillSpec = style.fill ?? "#6aa9ff";
+          }
+
+          layer.fill = fillSpec;
+
+          if (style["stroke-color"] || style["stroke-width"]) {
+            layer.stroke = {
+              color: style["stroke-color"] ?? "#000",
+              width: style["stroke-width"] ?? 1,
+            };
+          }
+          layer.size = style["radius"] ?? 4; // radius in px
         }
 
         return layer;
