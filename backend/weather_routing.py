@@ -206,12 +206,24 @@ def calculate_weather_route(datafile,
         routes_data.append({
                         'route': route_fastest,
                         'weight_type': "fastest-route",
-                        'route_index': 0
+                        'route_index': 0,
+                        "distance": nx.path_weight(G, route_fastest, weight='length') / 1000,  # in km
+                        "duration": nx.path_weight(G, route_fastest, weight='travel_time') / 60,  # in minutes
+                        "rain_exposure": nx.path_weight(G, route_fastest, weight='rain_weight') if 'rain' in weather_conditions else 0,
+                        "heat_exposure": nx.path_weight(G, route_fastest, weight='heat_weight') if 'heat' in weather_conditions else 0,
+                        "wind_exposure": nx.path_weight(G, route_fastest, weight='wind_weight') if 'wind' in weather_conditions else 0,
+                        "humidity_exposure": nx.path_weight(G, route_fastest, weight='humidity_weight') if 'humidity' in weather_conditions else 0,
                     })
         routes_data.append({
                         'route': route_total,
                         'weight_type': "weighted-route",
-                        'route_index': 1
+                        'route_index': 1,
+                        "distance": nx.path_weight(G, route_total, weight='length') / 1000,  # in km
+                        "duration": nx.path_weight(G, route_total, weight='travel_time') / 60,  # in minutes
+                        "rain_exposure": nx.path_weight(G, route_total, weight='rain_weight') if 'rain' in weather_conditions else 0,
+                        "heat_exposure": nx.path_weight(G, route_total, weight='heat_weight') if 'heat' in weather_conditions else 0,
+                        "wind_exposure": nx.path_weight(G, route_total, weight='wind_weight') if 'wind' in weather_conditions else 0,
+                        "humidity_exposure": nx.path_weight(G, route_total, weight='humidity_weight') if 'humidity' in weather_conditions else 0,    
                     })
     
     elif map_view_mode == "Custom weights":
@@ -230,7 +242,13 @@ def calculate_weather_route(datafile,
                     routes_data.append({
                         'route': route,
                         'weight_type': "%s-aware-route"%weight,
-                        'route_index': i
+                        'route_index': i,
+                        "distance": nx.path_weight(G, route, weight='length') / 1000,  # in km
+                        "duration": nx.path_weight(G, route, weight='travel_time') / 60,  # in minutes
+                        "rain_exposure": nx.path_weight(G, route, weight='rain_weight') if 'rain' in weather_conditions else 0,
+                        "heat_exposure": nx.path_weight(G, route, weight='heat_weight') if 'heat' in weather_conditions else 0,
+                        "wind_exposure": nx.path_weight(G, route, weight='wind_weight') if 'wind' in weather_conditions else 0,
+                        "humidity_exposure": nx.path_weight(G, route, weight='humidity_weight') if 'humidity' in weather_conditions else 0,    
                     })
                     
             except Exception as e:
@@ -238,9 +256,16 @@ def calculate_weather_route(datafile,
                     
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         routes_data.append({
-            'route': route_fastest,
-            'weight_type': 'fastest-route',
-        })
+                        'route': route_fastest,
+                        'weight_type': "fastest-route",
+                        'route_index': 0,
+                        "distance": nx.path_weight(G, route_fastest, weight='length') / 1000,  # in km
+                        "duration": nx.path_weight(G, route_fastest, weight='travel_time') / 60,  # in minutes
+                        "rain_exposure": nx.path_weight(G, route_fastest, weight='rain_weight') if 'rain' in weather_conditions else 0,
+                        "heat_exposure": nx.path_weight(G, route_fastest, weight='heat_weight') if 'heat' in weather_conditions else 0,
+                        "wind_exposure": nx.path_weight(G, route_fastest, weight='wind_weight') if 'wind' in weather_conditions else 0,
+                        "humidity_exposure": nx.path_weight(G, route_fastest, weight='humidity_weight') if 'humidity' in weather_conditions else 0,
+                    })
 
         
     # With this you are able to compare a only rain aware path, a only heat aware path and a heat + rain aware path
@@ -259,6 +284,13 @@ def calculate_weather_route(datafile,
                 routes_data.append({
                     'route': route,
                     'weight_type': "%s-aware-route"%weight,
+                    "distance": nx.path_weight(G, route, weight='length') / 1000,  # in km
+                    "duration": nx.path_weight(G, route, weight='travel_time') / 60,  # in minutes
+                    "rain_exposure": nx.path_weight(G, route, weight='rain_weight') if 'rain' in weather_conditions else 0,
+                    "heat_exposure": nx.path_weight(G, route, weight='heat_weight') if 'heat' in weather_conditions else 0,
+                    "wind_exposure": nx.path_weight(G, route, weight='wind_weight') if 'wind' in weather_conditions else 0,
+                    "humidity_exposure": nx.path_weight(G, route, weight='humidity_weight') if 'humidity' in weather_conditions else 0,    
+                    
                 })
                 
             except Exception as e:
@@ -308,7 +340,14 @@ def calculate_weather_route(datafile,
             "type": "Feature",
             "properties": {
                 "weight_type": weight_type,
-                # no route_index needed
+                "route_index": route["route_index"],
+                "distance_m": route["distance"],
+                "duration_minutes": route["duration"],
+                "rain_exposure": route["rain_exposure"],
+                "heat_exposure": route["heat_exposure"],
+                "wind_exposure": route["wind_exposure"],
+                "humidity_exposure": route["humidity_exposure"],
+
             },
             "geometry": {
                 "type": "LineString",
