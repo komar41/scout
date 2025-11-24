@@ -8,45 +8,61 @@ export function parseView(raw: any): ParsedView[] {
     const base: ParsedView = {
       physicalLayerRef: v.physical_layer?.ref,
       thematicLayerRef: v.thematic_layer?.ref,
-      opacity: v.style?.opacity ?? 1,
       type: v.type,
-      zoom_pan: v.zoom_pan,
-      zoom_level: v.zoom_level,
-      layers: [],
+      zoom_level: v.zoom_level ?? 16,
+      layers: v.layers ?? [],
     };
 
-    if (Array.isArray(v.layers)) {
+    if (v.type === "raster") {
+      (base as ParsedView).opacity = v.opacity ?? 1;
+    }
+
+    if (v.type == "vector" && Array.isArray(v.layers)) {
       base.layers = v.layers.map((lyr: any) => {
-        const style = lyr.style || {};
-        return {
+        const style = lyr.style;
+        const geomType = lyr["geom-type"];
+        const isPolygon = geomType === "polygon" || geomType === "multipolygon";
+
+        const isLine = geomType === "linestring";
+
+        const layer: any = {
           tag: lyr.tag,
-          fill: style.fill
-            ? {
-                attribute: style.fill.attribute || style.fill.feature,
-                colormap: style.fill.colormap || "viridis",
-              }
-            : undefined,
-          stroke: style.stroke_color
-            ? {
-                color: style.stroke_color,
-                width: style.stroke_width || 1,
-                "stroke-opacity":
-                  style.stroke_opacity ??
-                  style["stroke-opacity"] ??
-                  style.strokeOpacity ??
-                  1,
-              }
-            : undefined,
-
+          "geom-type": geomType,
           opacity: style.opacity ?? 1,
-
-          zIndex:
-            style.zIndex ??
-            style["z-index"] ??
-            style.z_index ??
-            lyr.zIndex ??
-            0,
+          zIndex: style["z-index"] ?? 1,
         };
+
+        if (isPolygon) {
+          let fillSpec: any;
+
+          if (style.fill) {
+            if (typeof style.fill === "object") {
+              fillSpec = {
+                attribute: style.fill.feature,
+                colormap: style.fill.colormap ?? "viridis",
+              };
+            } else {
+              fillSpec = style.fill ?? "#6aa9ff";
+            }
+          }
+          layer.fill = fillSpec;
+
+          if (style["stroke-color"] || style["stroke-width"]) {
+            layer.stroke = {
+              color: style["stroke-color"] ?? "#000",
+              width: style["stroke-width"] ?? 1,
+            };
+          }
+        }
+
+        if (isLine) {
+          layer.stroke = {
+            color: style["stroke-color"] ?? "#000",
+            width: style["stroke-width"] ?? 1,
+          };
+        }
+
+        return layer;
       });
     }
 

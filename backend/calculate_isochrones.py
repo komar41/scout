@@ -1,9 +1,6 @@
 
 import networkx as nx
 
-
-
-
 def calculate_isochrones(G, orig, route):
     """
     This function calculates isochrones for a given graph G and origin node.

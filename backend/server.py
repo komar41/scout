@@ -199,25 +199,25 @@ def ingest_physical_layer():
             
             gdf_out.to_file(out_path, driver="GeoJSON")
 
-            if(tag == "roads"):
-                roi_kind, roi_ = load_roi_mask(roi)
-                if roi_kind == "bbox":
-                    xmin, ymin, xmax, ymax = roi_
-                    with gzip.open("./data/%s/roads.pkl.gz" % datafile, "rb") as f:
-                        G = pickle.load(f)
+            # if(tag == "roads"):
+            #     roi_kind, roi_ = load_roi_mask(roi)
+            #     if roi_kind == "bbox":
+            #         xmin, ymin, xmax, ymax = roi_
+            #         with gzip.open("./data/%s/roads.pkl.gz" % datafile, "rb") as f:
+            #             G = pickle.load(f)
 
-                    nodes, _ = ox.graph_to_gdfs(G, nodes=True, edges=True, fill_edge_geometry=False)
-                    mask = (
-                        (nodes["y"] <= ymax) & (nodes["y"] >= ymin) &
-                        (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
-                    )
-                    node_ids = nodes.loc[mask].index
-                    G_crop = G.subgraph(node_ids).copy()
+            #         nodes, _ = ox.graph_to_gdfs(G, nodes=True, edges=True, fill_edge_geometry=False)
+            #         mask = (
+            #             (nodes["y"] <= ymax) & (nodes["y"] >= ymin) &
+            #             (nodes["x"] <= xmax) & (nodes["x"] >= xmin)
+            #         )
+            #         node_ids = nodes.loc[mask].index
+            #         G_crop = G.subgraph(node_ids).copy()
 
-                    with gzip.open("%s/vector/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
-                        pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)
+            #         with gzip.open("%s/vector/%s_roads.pkl.gz" % (OUT_DIR, pl_id), "wb") as f:
+            #             pickle.dump(G_crop, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-                    print(f"Saved cropped road graph to: {OUT_DIR}/vector/{pl_id}_roads.pkl.gz")
+            #         print(f"Saved cropped road graph to: {OUT_DIR}/vector/{pl_id}_roads.pkl.gz")
 
         except Exception as e:
             error_msg = f"[ERROR] Layer {pl_id}:{tag} → {type(e).__name__}: {e}"

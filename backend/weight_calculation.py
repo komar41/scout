@@ -194,10 +194,11 @@ def GNN_weight_calculations(G,
     else:
         lats_2d = np.array(lats_raw)
         lons_2d = np.array(lons_raw)
-    
+    print("2D lats/lons extracted")
     node_ids = list(G.nodes)
+    print("Preparing coords")
     coords = np.array([[G.nodes[n]['y'], G.nodes[n]['x']] for n in node_ids])  # lat, lon
-    
+    print("coords prepared")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print("Preparing node features and edges")

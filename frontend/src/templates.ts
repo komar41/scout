@@ -27,10 +27,12 @@ export const physicalLayerTemplate = {
     layers: [
       {
         tag: "buildings",
+        "geom-type": "multipolygon",
         features: ["height"],
       },
       {
         tag: "roads",
+        "geom-type": "linestring",
       },
     ],
   },
@@ -45,16 +47,18 @@ export const viewTemplate = {
       layers: [
         {
           tag: "buildings",
+          "geom-type": "multipolygon",
           style: {
             fill: { feature: "height", colormap: "greys" },
-            stroke_color: "#333333",
+            "stroke-color": "#333333",
             opacity: 1,
             "z-index": 1,
           },
         },
         {
           tag: "roads",
-          style: { "z-index": 2, stroke_color: "#444444" },
+          "geom-type": "linestring",
+          style: { "z-index": 2, "stroke-color": "#444444" },
         },
       ],
     },

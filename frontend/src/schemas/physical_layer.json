@@ -51,10 +51,14 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["tag"],
+        "required": ["tag", "geom-type"],
         "additionalProperties": false,
         "properties": {
           "tag": { "type": "string", "minLength": 1 },
+          "geom-type": {
+            "type": "string",
+            "enum": ["polygon", "multipolygon", "linestring", "point"]
+          },
           "features": {
             "type": "array",
             "items": { "type": "string", "minLength": 1 },

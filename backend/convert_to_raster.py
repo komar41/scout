@@ -21,6 +21,9 @@ from pathlib import Path
 
 os.environ['USE_PYGEOS'] = '0'
 
+import warnings
+np.warnings = warnings
+
 transformer = Transformer.from_crs(3395, 4326)
 invtransformer = Transformer.from_crs(4326,3395)
 
@@ -200,12 +203,12 @@ def compute_tile(gdf, i, j, zoom, max_height, outputfolder):
 #     filtered = gdf.cx[bb0[0]:bb1[0],bb0[1]:bb1[1]]
     filtered = gdf.loc[gdf.sindex.intersection(bbox.bounds)]
     
-    # if len(filtered) > 0:
-    values = elevation(filtered, bbox)
-    create_image(values, i, j, zoom, max_height, outputfolder)
+    if len(filtered) > 0:
+        values = elevation(filtered, bbox)
+        create_image(values, i, j, zoom, max_height, outputfolder)
 
-    # else:
-    #     print(f"No data for tile {zoom}/{i}/{j}")
+    else:
+        print(f"No data for tile {zoom}/{i}/{j}")
 
 def convert_raster(input, tag, feature, zoom, output):
     dir = Path("./data/served")

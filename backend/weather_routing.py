@@ -205,12 +205,12 @@ def calculate_weather_route(datafile,
         route_total = nx.shortest_path(G, orig_node, dest_node, weight="total_weight")
         routes_data.append({
                         'route': route_fastest,
-                        'weight_type': "fastest",
+                        'weight_type': "fastest-route",
                         'route_index': 0
                     })
         routes_data.append({
                         'route': route_total,
-                        'weight_type': "weighted",
+                        'weight_type': "weighted-route",
                         'route_index': 1
                     })
     
@@ -229,7 +229,7 @@ def calculate_weather_route(datafile,
                     route = k_paths[i]
                     routes_data.append({
                         'route': route,
-                        'weight_type': weight,
+                        'weight_type': "%s-aware-route"%weight,
                         'route_index': i
                     })
                     
@@ -239,7 +239,7 @@ def calculate_weather_route(datafile,
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         routes_data.append({
             'route': route_fastest,
-            'weight_type': 'fastest',
+            'weight_type': 'fastest-route',
         })
 
         
@@ -258,7 +258,7 @@ def calculate_weather_route(datafile,
         
                 routes_data.append({
                     'route': route,
-                    'weight_type': weight,
+                    'weight_type': "%s-aware-route"%weight,
                 })
                 
             except Exception as e:
@@ -267,7 +267,7 @@ def calculate_weather_route(datafile,
         route_fastest = nx.shortest_path(G, orig_node, dest_node, weight="travel_time")
         routes_data.append({
             'route': route_fastest,
-            'weight_type': 'fastest',
+            'weight_type': 'fastest-route',
         })
         
     # instead we will create linestrings and store to geojson. Then fetch it on frontend whenever needed.
@@ -293,7 +293,7 @@ def calculate_weather_route(datafile,
 
     for fname in os.listdir(out_dir):
         # keyword_map keys
-        if fname.startswith(f"{input}_fastest") or fname.startswith(f"{input}_weighted") or fname.startswith(f"{input}_rain") or fname.startswith(f"{input}_heat") or fname.startswith(f"{input}_wind") or fname.startswith(f"{input}_humidity"):
+        if fname.startswith(f"{input}_fastest-route") or fname.startswith(f"{input}_weighted-route") or fname.startswith(f"{input}_rain-aware-route") or fname.startswith(f"{input}_heat-aware-route") or fname.startswith(f"{input}_wind-aware-route") or fname.startswith(f"{input}_humidity-aware-route"):
             os.remove(os.path.join(out_dir, fname))
 
     for route in routes_data:
@@ -325,7 +325,7 @@ def calculate_weather_route(datafile,
             "features": features,
         }
 
-        fname = f"{input}_{weight_type}_roads.geojson"
+        fname = f"{input}_{weight_type}.geojson"
         with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
             json.dump(feature_collection, f)
 

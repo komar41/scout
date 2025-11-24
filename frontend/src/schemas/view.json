@@ -22,16 +22,20 @@
             }
           },
           "type": { "type": "string" },
-          "zoom_pan": { "type": "boolean" },
+          "zoom_level": { "type": "number" },
           "layers": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["tag", "style"],
+              "required": ["tag", "geom-type", "style"],
               "additionalProperties": true,
               "properties": {
                 "tag": { "type": "string", "minLength": 1 },
+                "geom-type": {
+                  "type": "string",
+                  "enum": ["polygon", "multipolygon", "linestring", "point"]
+                },
                 "style": { "type": "object" }
               }
             }
@@ -53,7 +57,24 @@
             }
           },
           "type": { "type": "string" },
-          "zoom_level": { "type": "number" }
+          "zoom_level": { "type": "number" },
+          "layers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["tag", "geom-type", "style"],
+              "additionalProperties": true,
+              "properties": {
+                "tag": { "type": "string", "minLength": 1 },
+                "geom-type": {
+                  "type": "string",
+                  "enum": ["polygon", "multipolygon", "linestring", "point"]
+                },
+                "style": { "type": "object" }
+              }
+            }
+          }
         }
       }
     ]

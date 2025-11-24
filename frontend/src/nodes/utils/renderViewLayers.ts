@@ -95,10 +95,71 @@ function buildInteractionSpecsForLayer(opts: {
   return specs;
 }
 
-/**
- * Render all physical-layer views into the Leaflet+D3 overlay.
- */
-export async function renderPhysicalLayersForViews(opts: {
+// Helper: render a raster layer (physical or thematic) and update unionBounds.
+async function renderRasterForView(opts: {
+  map: L.Map;
+  view: ParsedView;
+  layerId: string;
+  unionBounds: L.LatLngBounds | null;
+}): Promise<L.LatLngBounds | null> {
+  const { map, view, layerId, unionBounds } = opts;
+  const z = (view as any).zoom_level ?? 16;
+
+  const tiles: string[] = await fetch(
+    `http://127.0.0.1:5000/api/list-rasters/${layerId}`
+  ).then((r) => r.json());
+
+  const cacheBust = Date.now();
+
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  for (const name of tiles) {
+    // ignore malformed tiles like "12345_.png"
+    if (name.endsWith("_.png")) continue;
+
+    const [xStr, yStr] = name.replace(".png", "").split("_");
+    const x = Number(xStr);
+    const y = Number(yStr);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+
+    const url = `http://127.0.0.1:5000/generated/raster/${layerId}/${name}?v=${cacheBust}`;
+    console.log("raster tile url:", url);
+
+    const bounds = tileBoundsFromXYZ(x, y, z, map);
+
+    const overlay = L.imageOverlay(url, bounds, {
+      opacity: (view as any).opacity ?? 1,
+    });
+
+    overlay.addTo(map);
+    rasterOverlays.add(overlay);
+  }
+
+  if (minX === Infinity) {
+    return unionBounds;
+  }
+
+  const tileSize = 256;
+  const nwPoint = L.point(minX * tileSize, minY * tileSize);
+  const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
+
+  const nwLatLng = map.unproject(nwPoint, z);
+  const seLatLng = map.unproject(sePoint, z);
+
+  const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
+
+  return unionBounds ? unionBounds.extend(rasterBounds) : rasterBounds;
+}
+
+export async function renderLayers(opts: {
   id: string;
   map: L.Map;
   parsedViews: ParsedView[];
@@ -146,147 +207,42 @@ export async function renderPhysicalLayersForViews(opts: {
   let unionBounds: L.LatLngBounds | null = null;
   const path = makeLeafletPath(map);
 
+  // --- Thematic (non-physical) views ---
   for (const view of thematicViews) {
     const thId = view.thematicLayerRef;
     if (!thId) continue;
+
     if (view.type === "raster") {
-      const z = view.zoom_level ?? 16;
-
-      const tiles = await fetch(
-        `http://127.0.0.1:5000/api/list-rasters/${thId}`
-      ).then((r) => r.json());
-      const cacheBust = Date.now(); // define once outside the loop
-
-      let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-
-      for (const name of tiles) {
-        if (name.endsWith("_.png")) continue;
-        const [xStr, yStr] = name.replace(".png", "").split("_");
-        const x = Number(xStr);
-        const y = Number(yStr);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-
-        // collect extents
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-
-        const url = `http://127.0.0.1:5000/generated/raster/${thId}/${name}?v=${cacheBust}`;
-
-        console.log("raster tile url:", url);
-        const bounds = tileBoundsFromXYZ(x, y, z, map);
-
-        // include opacity from view definition
-        const overlay = L.imageOverlay(url, bounds, {
-          opacity: (view as any).opacity ?? 1,
-        });
-
-        overlay.addTo(map);
-        rasterOverlays.add(overlay);
-      }
-
-      // final union bounds (handles missing tiles!)
-      if (minX !== Infinity) {
-        const tileSize = 256;
-        const nwPoint = L.point(minX * tileSize, minY * tileSize);
-        const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
-
-        const nwLatLng = map.unproject(nwPoint, z);
-        const seLatLng = map.unproject(sePoint, z);
-
-        const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
-
-        unionBounds = unionBounds
-          ? unionBounds.extend(rasterBounds)
-          : rasterBounds;
-      }
+      unionBounds = await renderRasterForView({
+        map,
+        view,
+        layerId: thId,
+        unionBounds,
+      });
     }
   }
 
+  // --- Physical views ---
   for (const view of physicalViews) {
     const plId = view.physicalLayerRef;
     if (!plId) continue;
-    // ----- RASTER VIEWS -----
+
+    // Physical raster views
     if (view.type === "raster") {
-      const z = view.zoom_level ?? 16;
-
-      const tiles = await fetch(
-        `http://127.0.0.1:5000/api/list-rasters/${plId}`
-      ).then((r) => r.json()); // [ "16812_24353.png", ... ]
-
-      const cacheBust = Date.now();
-      let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-
-      for (const name of tiles) {
-        if (name.endsWith("_.png")) continue;
-        const [xStr, yStr] = name.replace(".png", "").split("_");
-        const x = Number(xStr);
-        const y = Number(yStr);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-
-        // collect extents
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-
-        const url = `http://127.0.0.1:5000/generated/raster/${plId}/${name}?v=${cacheBust}`;
-        console.log("raster tile url:", url);
-
-        // compute bounds for this tile at zoom z
-        const bounds = tileBoundsFromXYZ(x, y, z, map); // you implement this
-
-        // include opacity from view definition
-        const overlay = L.imageOverlay(url, bounds, {
-          opacity: (view as any).opacity ?? 1,
-        });
-
-        // L.rectangle(bounds, {
-        //   weight: 1,
-        //   fillOpacity: 0,
-        // }).addTo(map);
-
-        overlay.addTo(map);
-        rasterOverlays.add(overlay);
-        if (minX !== Infinity) {
-          const tileSize = 256;
-          const nwPoint = L.point(minX * tileSize, minY * tileSize);
-          const sePoint = L.point((maxX + 1) * tileSize, (maxY + 1) * tileSize);
-
-          const nwLatLng = map.unproject(nwPoint, z);
-          const seLatLng = map.unproject(sePoint, z);
-
-          const rasterBounds = L.latLngBounds(nwLatLng, seLatLng);
-
-          unionBounds = unionBounds
-            ? unionBounds.extend(rasterBounds)
-            : rasterBounds;
-        }
-      }
-
+      unionBounds = await renderRasterForView({
+        map,
+        view,
+        layerId: plId,
+        unionBounds,
+      });
       continue; // skip vector logic for this view
     }
-    if (view.type !== "vector") continue;
 
-    console.log(view);
-    // If no id → invalid
-    if (!plId) continue;
+    // Only handle vector physical views here
+    if (view.type !== "vector") continue;
 
     // Find matching physical layer
     // const pl = physicalLayers.find((p) => p.id === plId);
-
-    // Must exist AND must be vector
-    if (view.type !== "vector") {
-      continue;
-    }
 
     // console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
 
@@ -296,8 +252,6 @@ export async function renderPhysicalLayersForViews(opts: {
       const zb = (b as any).zIndex ?? 0;
       return za - zb;
     });
-
-    console.log(layers);
 
     for (const lyr of layers) {
       const tag = lyr.tag;
@@ -314,19 +268,36 @@ export async function renderPhysicalLayersForViews(opts: {
       }
 
       // --- styling ---
-      const attr = lyr.fill?.attribute;
-      const interp = pickInterpolator(lyr.fill?.colormap);
-      const ext = getPropertyRangeFromGeoJSON(fc, attr);
+      const geomType = (lyr as any)["geom-type"];
+
+      const isPolygonLayer =
+        geomType === "polygon" || geomType === "multipolygon";
+      const isLineLayer = geomType === "linestring";
+
+      let attr: string | undefined;
+      let colormapName: string | undefined;
+      let solidFill: string | undefined;
+
+      if (isPolygonLayer && lyr.fill) {
+        if (typeof lyr.fill === "string") {
+          // solid color fill
+          solidFill = lyr.fill;
+        } else if ("attribute" in (lyr.fill as any)) {
+          attr = (lyr.fill as any).attribute;
+          colormapName = (lyr.fill as any).colormap;
+        }
+      }
+
+      const interp = attr ? pickInterpolator(colormapName) : null;
+      const ext = attr ? getPropertyRangeFromGeoJSON(fc, attr) : null;
       const colorScale =
-        attr && interp
+        attr && interp && ext
           ? d3.scaleSequential(interp).domain(ext ?? [0, 1])
           : null;
 
-      const strokeColor = lyr.stroke?.color ?? "#222";
+      const strokeColor = lyr.stroke?.color ?? "#000";
       const strokeWidth = lyr.stroke?.width ?? 1;
-      const strokeOpacity = lyr.stroke?.["stroke-opacity"] ?? 1;
-      const fillOpacity = lyr.opacity ?? 1;
-      const fallbackFill = "#6aa9ff";
+      const layerOpacity = lyr.opacity ?? 1;
 
       const nTag = `${plId}::${tag}`;
       const gTag = getOrCreateTagGroup(nTag);
@@ -346,27 +317,38 @@ export async function renderPhysicalLayersForViews(opts: {
         .merge(sel as any)
         .attr("d", path as any)
         .style("fill", (d: any) => {
-          const geomType = d?.geometry?.type;
+          const gType = d?.geometry?.type;
+          const isLineFeature =
+            gType === "LineString" ||
+            gType === "MultiLineString" ||
+            isLineLayer;
 
-          const isLine =
-            geomType === "LineString" || geomType === "MultiLineString";
+          // Lines: no fill
+          if (isLineFeature) return "none";
 
-          if (isLine) return "none"; // 🔑 no fill for routes
+          // Polygon: solid fill color from parser
+          if (solidFill) return solidFill;
 
-          const v = attr ? Number(d?.properties?.[attr]) : undefined;
-          return attr && colorScale && Number.isFinite(v)
-            ? colorScale(v!)
-            : fallbackFill;
+          // Polygon: attribute-based colormap from parser
+          if (attr && colorScale) {
+            const v = Number(d?.properties?.[attr]);
+            if (Number.isFinite(v)) return colorScale(v);
+          }
+
+          // Fallback polygon fill
+          return "none";
         })
         .style("fill-opacity", (d: any) => {
-          const geomType = d?.geometry?.type;
-          const isLine =
-            geomType === "LineString" || geomType === "MultiLineString";
-          return isLine ? 0 : fillOpacity;
+          const gType = d?.geometry?.type;
+          const isLineFeature =
+            gType === "LineString" ||
+            gType === "MultiLineString" ||
+            isLineLayer;
+          return isLineFeature ? 0 : layerOpacity;
         })
         .style("stroke", strokeColor)
         .style("stroke-width", strokeWidth)
-        .style("stroke-opacity", strokeOpacity)
+        .style("stroke-opacity", layerOpacity)
         .style("vector-effect", "non-scaling-stroke")
         .style("pointer-events", "all");
 

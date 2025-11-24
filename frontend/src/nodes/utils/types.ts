@@ -26,8 +26,10 @@ export type ParsedLayer = {
 export type ParsedView = {
   physicalLayerRef?: string;
   thematicLayerRef?: string;
+  type?: string;
+  opacity?: string;
   style?: Record<string, any>;
-  zoom_pan?: boolean;
+  // zoom_pan?: boolean;
   zoom_level?: number;
   layers?: ParsedLayer[];
 };

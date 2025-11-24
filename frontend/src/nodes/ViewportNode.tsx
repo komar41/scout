@@ -10,7 +10,7 @@ import checkPng from "../assets/check-mark.png";
 import * as d3 from "d3";
 import { ViewDef, InteractionDef } from "./utils/types";
 import { parseInteraction, parseView } from "./utils/parser";
-import { renderPhysicalLayersForViews } from "./utils/renderPhysicalLayers";
+import { renderLayers } from "./utils/renderViewLayers";
 // import { TransformationNodeData } from "./TransformationNode";
 
 export type ViewportNodeData = {
@@ -156,7 +156,7 @@ const ViewportNode = memo(function ViewportNode({
 
       // const physicalLayers = nodeData.physical_layers;
 
-      await renderPhysicalLayersForViews({
+      await renderLayers({
         id,
         map,
         parsedViews: parsed,

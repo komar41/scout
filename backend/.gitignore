@@ -6,3 +6,4 @@ geoenvs
 models
 __pycache__
 *.pyc
+envs_
