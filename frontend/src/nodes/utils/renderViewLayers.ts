@@ -131,7 +131,7 @@ async function renderRasterForView(opts: {
     maxY = Math.max(maxY, y);
 
     const url = `http://127.0.0.1:5000/generated/raster/${layerId}/${name}?v=${cacheBust}`;
-    console.log("raster tile url:", url);
+    // console.log("raster tile url:", url);
 
     const bounds = tileBoundsFromXYZ(x, y, z, map);
 
@@ -199,7 +199,7 @@ export async function renderLayers(opts: {
   const physicalViews = parsedViews.filter((v) => v.physicalLayerRef);
   const thematicViews = parsedViews.filter((v) => v.thematicLayerRef);
 
-  console.log(physicalViews, thematicViews);
+  // console.log(physicalViews, thematicViews);
   if (!physicalViews.length && !thematicViews.length) {
     return;
   }
@@ -273,12 +273,13 @@ export async function renderLayers(opts: {
       const isPolygonLayer =
         geomType === "polygon" || geomType === "multipolygon";
       const isLineLayer = geomType === "linestring";
+      const isPointLayer = geomType === "point";
 
       let attr: string | undefined;
       let colormapName: string | undefined;
       let solidFill: string | undefined;
 
-      if (isPolygonLayer && lyr.fill) {
+      if ((isPolygonLayer || isPointLayer) && lyr.fill) {
         if (typeof lyr.fill === "string") {
           // solid color fill
           solidFill = lyr.fill;
@@ -299,8 +300,23 @@ export async function renderLayers(opts: {
       const strokeWidth = lyr.stroke?.width ?? 1;
       const layerOpacity = lyr.opacity ?? 1;
 
+      // point radius from parser (default 4px)
+
+      if (isPointLayer && typeof (path as any).pointRadius === "function") {
+        // d3-geo point rendering uses this
+        const pointRadius = (lyr as any).size ?? 4;
+        (path as any).pointRadius(pointRadius);
+      }
+
       const nTag = `${plId}::${tag}`;
       const gTag = getOrCreateTagGroup(nTag);
+
+      const configuredRadius = (lyr as any).size ?? 4; // radius in px
+
+      // Store metadata for redrawAll
+      (gTag as any)._geomType = geomType;
+      (gTag as any)._isPointLayer = isPointLayer;
+      (gTag as any)._pointRadius = configuredRadius;
 
       const keyFn = (d: any, i: number) =>
         d.id ?? d.properties?.id ?? d.properties?.osm_id ?? i;
@@ -311,8 +327,41 @@ export async function renderLayers(opts: {
 
       sel.exit().remove();
 
-      const enter = sel.enter().append("path").attr("class", "geom");
+      if (isLineLayer) {
+        if (lyr.border) {
+          const borderColor = lyr.border?.color ?? "#fff"; // or whatever default
+          const borderWidth = lyr.border?.width ?? 0;
 
+          // console.log(
+          //   `Rendering borders for line layer ${nTag}:`,
+          //   borderColor,
+          //   borderWidth
+          // );
+          const borderSel = gTag
+            .selectAll<SVGPathElement, any>("path.geom-border")
+            .data(fc.features, keyFn);
+
+          borderSel.exit().remove();
+
+          const borderEnter = borderSel
+            .enter()
+            .append("path")
+            .attr("class", "geom-border");
+
+          borderEnter
+            .merge(borderSel as any)
+            .attr("d", path as any)
+            .style("fill", "none")
+            .style("stroke", borderColor)
+            .style("stroke-width", borderWidth) // slightly thicker than inner line
+            .style("stroke-opacity", layerOpacity)
+            .style("vector-effect", "non-scaling-stroke")
+            .style("pointer-events", "none"); // so clicks go to the inner path
+        }
+      }
+
+      const enter = sel.enter().append("path").attr("class", "geom");
+      // console.log(strokeColor, strokeWidth);
       const geomSel = enter
         .merge(sel as any)
         .attr("d", path as any)
@@ -326,7 +375,7 @@ export async function renderLayers(opts: {
           // Lines: no fill
           if (isLineFeature) return "none";
 
-          // Polygon: solid fill color from parser
+          // Solid fill from parser (polygons or points)
           if (solidFill) return solidFill;
 
           // Polygon: attribute-based colormap from parser
