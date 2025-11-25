@@ -8,6 +8,8 @@ import {
   Controls,
   useReactFlow,
   addEdge,
+  MarkerType,
+  type DefaultEdgeOptions,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useRef, useState } from "react";
@@ -23,6 +25,19 @@ import type { ViewportNodeData } from "./nodes/ViewportNode";
 import type { WidgetViewNodeData } from "./nodes/WidgetViewNode";
 import type { PyCodeEditorNodeData } from "./nodes/PyCodeEditorNode";
 import { TransformationNodeData } from "./nodes/TransformationNode";
+
+const defaultEdgeOptions: DefaultEdgeOptions = {
+  style: {
+    stroke: "#888",
+    strokeWidth: 2, // optional but improves visibility
+  },
+  markerEnd: {
+    type: MarkerType.ArrowClosed, // or MarkerType.ArrowClosed
+    width: 20, // default is 20
+    height: 20, // default is 20
+    color: "#888", // optional
+  },
+};
 
 export default function App() {
   return (
@@ -476,6 +491,7 @@ function Canvas() {
         fitView
         minZoom={0.005}
         maxZoom={2}
+        defaultEdgeOptions={defaultEdgeOptions}
       >
         <Background />
         <Controls position="bottom-right" />
