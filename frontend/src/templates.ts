@@ -122,7 +122,7 @@ export const TEMPLATES: Record<TemplateKey, any> = {
 };
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
-  physical_layer: "physical_layer",
+  physical_layer: "physical layer",
   view: "view",
   // choice: "choice",
   // join: "join",

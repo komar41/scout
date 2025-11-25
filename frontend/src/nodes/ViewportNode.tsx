@@ -222,7 +222,8 @@ const ViewportNode = memo(function ViewportNode({
 
     // white background (tile hidden via opacity: 0)
     const baseLayer = L.tileLayer(
-      "https://cartodb-basemaps-a.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png",
+      // https://wiki.openstreetmap.org/wiki/Raster_tile_providers
+      "https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
       {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap contributors",
