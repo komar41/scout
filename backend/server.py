@@ -19,6 +19,13 @@ from weather_routing import *
 import subprocess
 import tempfile
 
+import threading
+import json as jsonlib
+
+worker_proc = None
+worker_lock = threading.Lock()
+worker_python_exe = None
+
 
 app = Flask(__name__)
 CORS(app)
@@ -30,6 +37,65 @@ raster_subdir = Path(OUT_DIR / "raster")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 vector_subdir.mkdir(parents=True, exist_ok=True)
 raster_subdir.mkdir(parents=True, exist_ok=True)
+
+def start_worker():
+    global worker_proc, worker_python_exe
+
+    if worker_proc is not None and worker_proc.poll() is None:
+        # already running
+        return
+
+    project_dir = Path(__file__).parent
+    python_exe = project_dir / "envs" / ("python.exe" if os.name == "nt" else "bin/python")
+
+    if not python_exe.exists():
+        raise RuntimeError(f"Python interpreter not found at: {python_exe}")
+
+    worker_python_exe = python_exe
+
+    # -u for unbuffered so we can get output immediately
+    worker_proc = subprocess.Popen(
+        [str(python_exe), "-u", "python_worker.py"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=str(project_dir),
+        env={**os.environ, "PYTHONPATH": str(project_dir) + os.pathsep + os.environ.get("PYTHONPATH", "")},
+        bufsize=1,  # line-buffered
+    )
+
+    print("[WORKER] Started python_worker process PID:", worker_proc.pid)
+
+def send_code_to_worker(code: str) -> dict:
+    """
+    Sends code to the persistent worker and returns a dict:
+    { "ok": bool, "stdout": str, "stderr": str }
+    """
+    global worker_proc
+
+    if worker_proc is None or worker_proc.poll() is not None:
+        start_worker()
+
+    # Ensure only one thread talks to the worker at a time
+    with worker_lock:
+        req = {"code": code}
+        line = jsonlib.dumps(req) + "\n"
+
+        # send
+        assert worker_proc.stdin is not None
+        worker_proc.stdin.write(line)
+        worker_proc.stdin.flush()
+
+        # receive one line
+        assert worker_proc.stdout is not None
+        resp_line = worker_proc.stdout.readline()
+        if not resp_line:
+            # worker died unexpectedly
+            raise RuntimeError("Worker process terminated unexpectedly")
+
+    resp = jsonlib.loads(resp_line)
+    return resp
 
 # Remove cached outputs on exit
 def cleanup_served():
@@ -296,66 +362,24 @@ def run_python():
     code = payload.get("code", "")
 
     print("Received code to run:\n", code)
-    tmp_filename = None
+
     try:
-        # Create a temp file to run code
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
-            tmp.write(code)
-            tmp_filename = tmp.name
+        resp = send_code_to_worker(code)
+        # resp: {"ok": bool, "stdout": "...", "stderr": "..."}
 
-        project_dir = Path(__file__).parent
-        python_exe = project_dir / "envs" / ("python.exe" if os.name == "nt" else "bin/python")
+        return jsonify({
+            "stdout": resp.get("stdout", ""),
+            "stderr": resp.get("stderr", ""),
+            "returncode": 0 if resp.get("ok") else 1,
+        }), 200
 
-        if not python_exe.exists():
-            return jsonify({
-                "stdout": "",
-                "stderr": f"Python interpreter not found at: {python_exe}",
-                "returncode": -1,
-            }), 200
-        
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(project_dir) + os.pathsep + env.get("PYTHONPATH", "")
-
-        print("Using interpreter:", python_exe)
-
-        # 2. Run subprocess (wrapped in try/except)
-        try:
-            result = subprocess.run(
-                [str(python_exe), tmp_filename],
-                capture_output=True,
-                text=True,
-                timeout=3600,
-                cwd=str(project_dir),
-                env=env
-            )
-
-            return jsonify({
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode
-            }), 200
-
-        except subprocess.TimeoutExpired:
-            return jsonify({
-                "stdout": "",
-                "stderr": "Execution timed out.",
-                "returncode": -1
-            }), 200
-
-        except Exception as e:
-            return jsonify({
-                "stdout": "",
-                "stderr": str(e),
-                "returncode": -1
-            }), 200
-        
-    finally:
-        # 3. Cleanup temp file
-        if tmp_filename and os.path.exists(tmp_filename):
-            try:
-                os.remove(tmp_filename)
-            except OSError:
-                pass
+    except Exception as e:
+        # If something goes really wrong (worker dead, etc.)
+        return jsonify({
+            "stdout": "",
+            "stderr": f"Worker error: {e}",
+            "returncode": -1,
+        }), 200
 
 
 if __name__ == '__main__':
@@ -366,5 +390,11 @@ if __name__ == '__main__':
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     vector_subdir.mkdir(parents=True, exist_ok=True)
     raster_subdir.mkdir(parents=True, exist_ok=True)
+
+    # Start the worker up-front (or you can let send_code_to_worker lazily do it)
+    try:
+        start_worker()
+    except Exception as e:
+        print("[WORKER] Failed to start:", e)
 
     app.run(host='0.0.0.0', port=5000, debug=True)
