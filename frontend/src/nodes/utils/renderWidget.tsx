@@ -95,7 +95,9 @@ export function renderTextWidget(
 
   return (
     <div className="nodrag" style={{ width: "100%", textAlign: "center" }}>
-      <Typography style={style}>{text}</Typography>
+      <Typography style={{ ...style, whiteSpace: "pre-line" }}>
+        {text}
+      </Typography>
 
       {widget.description && (
         <div

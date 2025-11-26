@@ -160,3 +160,8 @@
   pointer-events: none;
   display: block;
 }
+
+.wvnode__handle--hidden {
+  opacity: 0;
+  pointer-events: none;
+}

@@ -1,4 +1,11 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { NodeResizer, useReactFlow } from "@xyflow/react";
 import type { NodeProps, Node } from "@xyflow/react";
 import Ajv, { ErrorObject } from "ajv";
@@ -21,6 +28,8 @@ export type BaseNodeData = {
 
   footerActions?: React.ReactNode;
   onFetch?: (id: string) => void;
+
+  onToggleMinimize?: (id: string) => void;
 };
 
 export type BaseNode = Node<BaseNodeData, string>;
@@ -85,6 +94,20 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
     [data, id, runValidation]
   );
 
+  const handleTitleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      console.log(e.target.value);
+      console.log(id);
+      const nextTitle = e.target.value;
+      rf.setNodes((nodes) =>
+        nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, title: nextTitle } } : n
+        )
+      );
+    },
+    [id, rf]
+  );
+
   useMemo(() => {
     runValidation(innerValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,6 +122,7 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
   }, [data, id, rf]);
 
   const onRun = useCallback(() => {
+    console.log("[run]", id);
     if (data?.onRun) return data.onRun(id);
     console.log("[run]", id);
   }, [data, id]);
@@ -109,7 +133,14 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
       {/* Header */}
       <div className="gnode__header">
-        <div className="gnode__title">{title}</div>
+        <div className="gnode__title">
+          <input
+            type="text"
+            className="gnode__titleInput"
+            value={title}
+            onChange={handleTitleChange}
+          />
+        </div>
         <div className="gnode__headerActions">
           <span
             className={`gnode__badge ${
@@ -118,6 +149,13 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
           >
             {overallValid ? "VALID" : "INVALID"}
           </span>
+          <button
+            type="button"
+            className="gnode__iconBtn"
+            onClick={() => data?.onToggleMinimize?.(id)}
+          >
+            &#8211;
+          </button>
           <button
             type="button"
             className="gnode__iconBtn gnode__iconBtn--close"

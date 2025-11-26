@@ -642,7 +642,7 @@ function createGrammarNode({
     type,
     position: pos,
     data: {
-      title: "Grammar",
+      // title: "Grammar",
       value: TEMPLATES[template] ?? {},
       onChange: (val, targetId) => {
         setNodes((nds) =>

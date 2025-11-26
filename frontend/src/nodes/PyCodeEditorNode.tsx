@@ -184,14 +184,29 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
             type="button"
             className="pcenode__minimizedRunBtn"
             onClick={handleRun}
+            disabled={running}
+            aria-busy={running}
+            title={running ? "Running code..." : "Run code"}
           >
-            <img
-              src={runPng2}
-              alt="Run"
-              className="pcenode__minimizedRunIcon"
-            />
+            {running ? (
+              // Spinner instead of run icon
+              <span className="pcenode__spinner" aria-hidden="true" />
+            ) : runningSuccess ? (
+              <img
+                src={checkPng}
+                alt="Success"
+                className="pcenode__minimizedRunIcon"
+              />
+            ) : (
+              <img
+                src={runPng2}
+                alt="Run"
+                className="pcenode__minimizedRunIcon"
+              />
+            )}
+
             <span className="pcenode__minimizedRunText">
-              {data?.title ?? "Code"}
+              {running ? "Running..." : data?.title ?? "Code"}
             </span>
           </button>
 
@@ -201,11 +216,7 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
             className="pcenode__minimizedRestoreCircle_1 pcenode__minimizedRestoreCircle--topLeft"
             onClick={handleToggleMinimize}
           >
-            <img
-              src={expandPng}
-              alt="Restore"
-              // className="pcenode__minimizedRestoreIcon"
-            />
+            <img src={expandPng} alt="Restore" />
           </button>
 
           {/* Floating restore (bottom-right) */}
@@ -214,11 +225,7 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
             className="pcenode__minimizedRestoreCircle_2 pcenode__minimizedRestoreCircle--bottomRight"
             onClick={() => {}}
           >
-            <img
-              src={restartPng}
-              alt="Run / update"
-              // className="pcenode__minimizedRunUpdateIcon_2"
-            />
+            <img src={restartPng} alt="Run / update" />
           </button>
         </div>
       ) : (
@@ -316,30 +323,35 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
           </div>
         </>
       )}
-      {!minimized && (
-        <>
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="viewport-in-1"
-            className="pcenode__handle"
-          />
 
-          <Handle
-            type="target"
-            position={Position.Left}
-            id="viewport-in-2"
-            className="pcenode__handle pcenode__handle--left"
-          />
+      <>
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="viewport-in-1"
+          className={`pcenode__handle ${
+            minimized ? "pcenode__handle--hidden" : ""
+          }`}
+        />
 
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="viewport-out"
-            className="pcenode__handle pcenode__handle--right"
-          />
-        </>
-      )}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="viewport-in-2"
+          className={`pcenode__handle pcenode__handle--left ${
+            minimized ? "pcenode__handle--hidden" : ""
+          }`}
+        />
+
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="viewport-out"
+          className={`pcenode__handle pcenode__handle--right ${
+            minimized ? "pcenode__handle--hidden" : ""
+          }`}
+        />
+      </>
     </div>
   );
 });

@@ -6,11 +6,21 @@ import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/physical_layer.json";
 
 import fetchPng from "../assets/fetch.png";
+import fetchPng2 from "../assets/fetch_2.png";
 import checkPng from "../assets/check-mark.png";
+
+import expandPng from "../assets/expand.png";
+import restartPng from "../assets/restart.png";
+
 import "./PhysicalLayerNode.css";
 import "./BaseGrammarNode.css";
 
 export type PhysicalLayerNode = Node<BaseNodeData, "physicalLayerNode">;
+
+const NODE_MIN_WIDTH = 300;
+const NODE_MIN_HEIGHT = 180;
+const NODE_MINIMIZED_WIDTH = 280;
+const NODE_MINIMIZED_HEIGHT = 48;
 
 const PhysicalLayerNode = memo(function PhysicalLayerNode(
   props: NodeProps<PhysicalLayerNode>
@@ -21,7 +31,10 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
   const [loading, setLoading] = useState(false);
   const [loadingSuccess, setLoadingSuccess] = useState(false);
 
+  const [minimized, setMinimized] = useState(false);
+
   const onFetch = useCallback(async () => {
+    console.log(data.title, "fetching physical layer data...");
     const val: any = (data.value as any)?.physical_layer;
 
     if (!val) {
@@ -68,26 +81,69 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
     [rf, setEdges]
   );
 
+  const handleToggleMinimize = useCallback(() => {
+    setMinimized((prev) => {
+      const next = !prev;
+
+      // Resize node
+      rf.setNodes((nodes) =>
+        nodes.map((n) => {
+          if (n.id !== id) return n;
+
+          if (next) {
+            // going to minimized
+            return {
+              ...n,
+              width: NODE_MINIMIZED_WIDTH,
+              height: NODE_MINIMIZED_HEIGHT,
+            };
+          } else {
+            // restoring
+            const nextWidth =
+              n.width && n.width > NODE_MIN_WIDTH ? n.width : NODE_MIN_WIDTH;
+            const nextHeight =
+              n.height && n.height > NODE_MIN_HEIGHT
+                ? n.height
+                : NODE_MIN_HEIGHT;
+
+            return {
+              ...n,
+              width: nextWidth,
+              height: nextHeight,
+            };
+          }
+        })
+      );
+
+      // Hide/show edges
+      setEdges((eds) =>
+        eds.map((e) =>
+          e.source === id || e.target === id ? { ...e, hidden: next } : e
+        )
+      );
+
+      return next;
+    });
+  }, [id, rf, setEdges]);
+
+  const handleRun = useCallback(() => {
+    if (data?.onRun) {
+      return data.onRun(id);
+    }
+  }, [data, id]);
   return (
     <>
-      <BaseGrammarNode
-        id={id}
-        selected={selected}
-        data={{
-          ...data,
-          title: "Grammar • physical_layer",
-          schema,
-          pickInner: (v) => (v as any)?.physical_layer,
-          onClose: onClosePhysicalNode,
-          // NEW: second footer button just for physical layer
-          footerActions: (
+      {minimized ? (
+        <div className="gnode gnode--minimized">
+          <div className="gnode__minimized">
+            {/* Big fetch button */}
             <button
               type="button"
+              className="gnode__minimizedFetchBtn"
               onClick={onFetch}
-              title={loading ? "Fetching..." : "Fetch data"}
-              aria-label="Fetch data"
-              className="gnode__actionBtn"
               disabled={loading}
+              aria-busy={loading}
+              title={loading ? "Fetching..." : "Fetch data"}
             >
               {loading ? (
                 <span className="gnode__spinner" aria-hidden="true" />
@@ -95,25 +151,90 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
                 <img
                   src={checkPng}
                   alt="Success"
-                  className="gnode__actionIcon"
+                  className="gnode__minimizedIcon"
                 />
               ) : (
                 <img
                   src={fetchPng}
                   alt="Fetch data"
-                  className="gnode__actionIcon"
+                  className="gnode__minimizedIcon"
                 />
               )}
-            </button>
-          ),
-        }}
-      />
 
+              <span className="gnode__minimizedText">
+                {loading ? "Fetching..." : data.title ?? "physical_layer"}
+              </span>
+            </button>
+
+            {/* Floating restore (top-left) */}
+            <button
+              type="button"
+              className="gnode__minimizedRestoreCircle_1 gnode__minimizedRestoreCircle--topLeft"
+              onClick={handleToggleMinimize}
+            >
+              <img src={expandPng} alt="Restore" />
+            </button>
+
+            {/* Floating fetch/update (bottom-right) */}
+            <button
+              type="button"
+              className="gnode__minimizedRestoreCircle_2 gnode__minimizedRestoreCircle--bottomRight"
+              onClick={handleRun}
+              disabled={loading}
+            >
+              <img src={restartPng} alt="Fetch / update" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <BaseGrammarNode
+          id={id}
+          selected={selected}
+          data={{
+            ...data,
+            title: data.title ?? "Grammar • physical_layer",
+            schema,
+            pickInner: (v) => (v as any)?.physical_layer,
+            onClose: onClosePhysicalNode,
+            onToggleMinimize: handleToggleMinimize,
+            footerActions: (
+              <button
+                type="button"
+                onClick={onFetch}
+                title={loading ? "Fetching..." : "Fetch data"}
+                aria-label="Fetch data"
+                className="gnode__actionBtn"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="gnode__spinner" aria-hidden="true" />
+                ) : loadingSuccess ? (
+                  <img
+                    src={checkPng}
+                    alt="Success"
+                    className="gnode__actionIcon"
+                  />
+                ) : (
+                  <img
+                    src={fetchPng2}
+                    alt="Fetch data"
+                    className="gnode__actionIcon"
+                  />
+                )}
+              </button>
+            ),
+          }}
+        />
+      )}
+
+      {/* Handle is ALWAYS rendered, just hidden when minimized */}
       <Handle
         type="source"
         position={Position.Right}
         id="physical-out"
-        className="gnode__handle gnode__handle--right"
+        className={`gnode__handle gnode__handle--right ${
+          minimized ? "gnode__handle--hidden" : ""
+        }`}
       />
     </>
   );

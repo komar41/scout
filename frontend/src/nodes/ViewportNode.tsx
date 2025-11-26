@@ -1,4 +1,11 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
 import L from "leaflet";
@@ -15,6 +22,7 @@ import { renderLayers } from "./utils/renderViewLayers";
 // import { TransformationNodeData } from "./TransformationNode";
 
 export type ViewportNodeData = {
+  title?: string;
   center?: [number, number];
   zoom?: number;
   onClose?: (id: string) => void;
@@ -59,8 +67,20 @@ const ViewportNode = memo(function ViewportNode({
   const gByTagRef = useRef<
     Map<string, d3.Selection<SVGGElement, unknown, null, undefined>>
   >(new Map());
-
   const rf = useReactFlow();
+
+  // ---------- TITLE CHANGE ----------
+  const handleTitleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const nextTitle = e.target.value;
+      rf.setNodes((nodes) =>
+        nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, title: nextTitle } } : n
+        )
+      );
+    },
+    [id, rf]
+  );
 
   const shouldHandleClick = useCallback(() => {
     if (wasDraggedRef.current) {
@@ -352,7 +372,14 @@ const ViewportNode = memo(function ViewportNode({
       <NodeResizer minWidth={300} minHeight={260} />
 
       <div className="vpnode__header">
-        <div className="vpnode__title">Viewport</div>
+        <div className="vpnode__titleWrapper">
+          <input
+            type="text"
+            className="pcenode__titleInput"
+            value={data?.title ?? "Viewport"}
+            onChange={handleTitleChange}
+          />
+        </div>
         <button
           type="button"
           className="vpnode__iconBtn vpnode__iconBtn--close"

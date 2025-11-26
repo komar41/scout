@@ -159,37 +159,41 @@ const WidgetViewNode = memo(function WidgetViewNode({
         </div>
       )}
 
-      {!minimized && (
-        <>
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="viewport-in-1"
-            className="wvnode__handle__source"
-          />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="viewport-in-1"
+        className={`wvnode__handle__source ${
+          minimized ? "wvnode__handle--hidden" : ""
+        }`}
+      />
 
-          <Handle
-            type="target"
-            position={Position.Left}
-            id="viewport-in-2"
-            className="wvnode__handle__source"
-          />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="viewport-in-2"
+        className={`wvnode__handle__source ${
+          minimized ? "wvnode__handle--hidden" : ""
+        }`}
+      />
 
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="viewport-out-1"
-            className="wvnode__handle__target"
-          />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="viewport-out-1"
+        className={`wvnode__handle__target ${
+          minimized ? "wvnode__handle--hidden" : ""
+        }`}
+      />
 
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="viewport-out-2"
-            className="wvnode__handle__target"
-          />
-        </>
-      )}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="viewport-out-2"
+        className={`wvnode__handle__target ${
+          minimized ? "wvnode__handle--hidden" : ""
+        }`}
+      />
 
       {/* Minimized controls: vertical buttons on the right edge */}
       {minimized && (
@@ -209,18 +213,20 @@ const WidgetViewNode = memo(function WidgetViewNode({
           </button>
 
           {/* Bottom-right: run/update with restartPng */}
-          <button
-            type="button"
-            className="wvnode__floatingBtn wvnode__floatingBtn--bottomRight"
-            onClick={onRun}
-            title="update"
-          >
-            <img
-              src={restartPng}
-              alt="update"
-              className="wvnode__floatingIcon"
-            />
-          </button>
+          {data.widget?.type !== "text" && (
+            <button
+              type="button"
+              className="wvnode__floatingBtn wvnode__floatingBtn--bottomRight"
+              onClick={onRun}
+              title="update"
+            >
+              <img
+                src={restartPng}
+                alt="update"
+                className="wvnode__floatingIcon"
+              />
+            </button>
+          )}
         </>
       )}
     </div>
