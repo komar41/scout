@@ -454,8 +454,8 @@ export function renderSliderWidget(
       <div
         style={{
           marginBottom: "4px",
-          fontSize: "0.9rem",
-          fontWeight: 500,
+          fontSize: "16px",
+          // fontWeight: 500,
           textAlign: "center",
         }}
       >
@@ -475,7 +475,7 @@ export function renderSliderWidget(
           {/* max on top */}
           <div
             style={{
-              fontSize: "0.9rem",
+              fontSize: "16px",
               color: "#666",
               marginBottom: 10,
             }}
@@ -501,7 +501,7 @@ export function renderSliderWidget(
           {/* min at bottom */}
           <div
             style={{
-              fontSize: "0.9rem",
+              fontSize: "16px",
               color: "#666",
               marginTop: 10,
             }}
@@ -531,7 +531,7 @@ export function renderSliderWidget(
             style={{
               display: "flex",
               justifyContent: "space-between",
-              fontSize: "0.9rem",
+              fontSize: "16px",
               color: "#666",
               marginTop: 0,
             }}

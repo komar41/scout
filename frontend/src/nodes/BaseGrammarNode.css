@@ -17,8 +17,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 8px;
-  font-weight: 500;
-  font-size: 14px;
+  /* font-weight: 500; */
+  font-size: 16px;
   border-bottom: 1px solid #eee;
   background: #6a51a3;
   color: #fff;

@@ -21,12 +21,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  font-weight: 500;
-  font-size: 14px;
+  /* font-weight: 500; */
+  font-size: 16px;
   background: #1f78b4;
-
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+}
+
+.wvnode__headerBtns {
+  display: flex;
+  align-items: center;
 }
 
 .wvnode__iconBtn {
@@ -63,7 +67,7 @@
 .wvnode__actionIcon {
   width: 18px;
   height: 18px;
-  display: block; /* removes baseline gap */
+  display: block;
   pointer-events: none;
 }
 
@@ -74,11 +78,10 @@
 .wvnode__body {
   position: relative;
   display: flex;
-  justify-content: center; /* centers horizontally */
-  align-items: flex-start; /* no vertical centering (optional) */
+  justify-content: center;
+  align-items: flex-start;
   padding: 8px 12px;
-  background: #fff;
-  /* border: 1px solid #e5e7eb; */
+  background: transparent;
   overflow: hidden;
 }
 
@@ -110,4 +113,50 @@
   border: 2px solid #fff !important;
   border-radius: 50%;
   z-index: 5;
+}
+
+/* --- NEW: minimized controls on the right edge --- */
+
+/* Floating buttons for minimized state */
+.wvnode__floatingBtn {
+  position: absolute;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  padding: 0;
+}
+
+/* Top-left ear */
+.wvnode__floatingBtn--topLeft {
+  top: -20px;
+  left: -20px;
+}
+
+/* Bottom-right ear */
+.wvnode__floatingBtn--bottomRight {
+  bottom: -20px;
+  right: -20px;
+}
+
+.wvnode__floatingIcon {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  display: block;
+}
+
+.wvnode__floatingIcon_2 {
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  display: block;
 }

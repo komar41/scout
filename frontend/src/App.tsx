@@ -776,7 +776,7 @@ function createPyCodeEditorNode({
     type: "pyCodeEditorNode",
     position: pos,
     width: 400,
-    height: 300,
+    // height: 300,
     data: {},
   };
 

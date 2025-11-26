@@ -1,8 +1,9 @@
-import { memo, use, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { Position, NodeResizer, useReactFlow, Handle } from "@xyflow/react";
 import "./WidgetViewNode.css";
 import restartPng from "../assets/restart.png";
+import expandPng from "../assets/expand.png";
 import type { WidgetDef, WidgetOutput } from "./utils/types";
 import { renderWidgetFromWidgetDef } from "./utils/renderWidget";
 
@@ -20,10 +21,12 @@ const WidgetViewNode = memo(function WidgetViewNode({
   id,
   data,
 }: NodeProps<WidgetViewNode>) {
+  const rf = useReactFlow();
   const { setNodes } = useReactFlow();
 
   // store current widget id + value
   const [widgetValue, setWidgetValue] = useState<WidgetOutput | null>(null);
+  const [minimized, setMinimized] = useState(false);
 
   // inside WidgetViewNode component
   const handleClose = useCallback(() => {
@@ -32,6 +35,21 @@ const WidgetViewNode = memo(function WidgetViewNode({
       return data.onClose(id);
     }
   }, [data, id]);
+
+  // ---------- MINIMIZE TOGGLE ----------
+  const handleToggleMinimize = useCallback(() => {
+    setMinimized((prev) => {
+      const next = !prev;
+
+      rf.setEdges((eds) =>
+        eds.map((e) =>
+          e.source === id || e.target === id ? { ...e, hidden: next } : e
+        )
+      );
+
+      return next;
+    });
+  }, [id, rf]);
 
   const onRun = useCallback(() => {
     if (data?.onRun) {
@@ -74,22 +92,33 @@ const WidgetViewNode = memo(function WidgetViewNode({
   return (
     <div className="wvnode">
       <NodeResizer />
+      {!minimized && (
+        <div className="wvnode__header">
+          <div className="wvnode__title">Widget</div>
 
-      <div className="wvnode__header">
-        <div className="wvnode__title">Widget</div>
-        <button
-          type="button"
-          className="wvnode__iconBtn wvnode__iconBtn--close"
-          onClick={handleClose}
-        >
-          ✕
-        </button>
-      </div>
+          <div className="wvnode__headerBtns">
+            <button
+              type="button"
+              className="wvnode__iconBtn"
+              onClick={handleToggleMinimize}
+            >
+              &#8211;
+            </button>
+            <button
+              type="button"
+              className="wvnode__iconBtn wvnode__iconBtn--close"
+              onClick={handleClose}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="wvnode__body">
         {renderWidgetFromWidgetDef(
           data?.widget,
-          widgetValue?.value, // current value drives the widget (controlled)
+          widgetValue?.value,
           (wid, v, val) => {
             const out: WidgetOutput = {
               id: wid,
@@ -99,7 +128,6 @@ const WidgetViewNode = memo(function WidgetViewNode({
             setWidgetValue(out);
             console.log("Widget value changed:", wid, v, val);
 
-            // mirror into the node's data.output
             setNodes((nds) =>
               nds.map((n) =>
                 n.id === id
@@ -117,45 +145,84 @@ const WidgetViewNode = memo(function WidgetViewNode({
         )}
       </div>
 
-      <div className="wvnode__footer">
-        <button
-          type="button"
-          onClick={onRun}
-          title="update"
-          aria-label="update"
-          className="wvnode__actionBtn"
-        >
-          <img src={restartPng} alt="update" className="wvnode__actionIcon" />
-        </button>
-      </div>
+      {!minimized && (
+        <div className="wvnode__footer">
+          <button
+            type="button"
+            onClick={onRun}
+            title="update"
+            aria-label="update"
+            className="wvnode__actionBtn"
+          >
+            <img src={restartPng} alt="update" className="wvnode__actionIcon" />
+          </button>
+        </div>
+      )}
 
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="viewport-in-1"
-        className="wvnode__handle__source"
-      />
+      {!minimized && (
+        <>
+          <Handle
+            type="target"
+            position={Position.Top}
+            id="viewport-in-1"
+            className="wvnode__handle__source"
+          />
 
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="viewport-in-2"
-        className="wvnode__handle__source"
-      />
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="viewport-in-2"
+            className="wvnode__handle__source"
+          />
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="viewport-out-1"
-        className="wvnode__handle__target"
-      />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="viewport-out-1"
+            className="wvnode__handle__target"
+          />
 
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="viewport-out-2"
-        className="wvnode__handle__target"
-      />
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="viewport-out-2"
+            className="wvnode__handle__target"
+          />
+        </>
+      )}
+
+      {/* Minimized controls: vertical buttons on the right edge */}
+      {minimized && (
+        <>
+          {/* Top-left: respawn / restore */}
+          <button
+            type="button"
+            className="wvnode__floatingBtn wvnode__floatingBtn--topLeft"
+            onClick={handleToggleMinimize}
+            title="Restore widget"
+          >
+            <img
+              src={expandPng}
+              alt="update"
+              className="wvnode__floatingIcon_2"
+            />
+          </button>
+
+          {/* Bottom-right: run/update with restartPng */}
+          <button
+            type="button"
+            className="wvnode__floatingBtn wvnode__floatingBtn--bottomRight"
+            onClick={onRun}
+            title="update"
+          >
+            <img
+              src={restartPng}
+              alt="update"
+              className="wvnode__floatingIcon"
+            />
+          </button>
+        </>
+      )}
     </div>
   );
 });
