@@ -23,7 +23,7 @@ export type PyCodeEditorNode = Node<PyCodeEditorNodeData, "pyCodeEditorNode">;
 const NODE_MIN_WIDTH = 300;
 const NODE_MIN_HEIGHT = 260;
 
-const NODE_MINIMIZED_WIDTH = 280; // tweak as you like
+const NODE_MINIMIZED_WIDTH = 150; // tweak as you like
 const NODE_MINIMIZED_HEIGHT = 48; // matches minimized bar height
 
 const PyCodeEditorNode = memo(function PyCodeEditorNode({
@@ -72,20 +72,21 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
           if (n.id !== id) return n;
 
           if (next) {
-            // Going to minimized → force a small height on the RF node itself
+            // Going TO minimized: snap down to a small default size
             return {
               ...n,
-              height: NODE_MINIMIZED_HEIGHT,
               width: NODE_MINIMIZED_WIDTH,
+              height: NODE_MINIMIZED_HEIGHT,
             };
           } else {
-            // Restoring → let RF / NodeResizer determine height again
+            // Going back to full: enforce larger min size
             const nextWidth =
               n.width && n.width > NODE_MIN_WIDTH ? n.width : NODE_MIN_WIDTH;
             const nextHeight =
               n.height && n.height > NODE_MIN_HEIGHT
                 ? n.height
                 : NODE_MIN_HEIGHT;
+
             return {
               ...n,
               width: nextWidth,
@@ -95,7 +96,7 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
         })
       );
 
-      // 2) Hide/show edges connected to this node
+      // Hide/show edges connected to this node
       rf.setEdges((eds) =>
         eds.map((e) =>
           e.source === id || e.target === id ? { ...e, hidden: next } : e
@@ -173,9 +174,12 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
 
   return (
     <div className={`pcenode ${minimized ? "pcenode--minimized" : ""}`}>
-      {!minimized && (
-        <NodeResizer minWidth={NODE_MIN_WIDTH} minHeight={NODE_MIN_HEIGHT} />
-      )}
+      <NodeResizer
+        minWidth={minimized ? NODE_MINIMIZED_WIDTH : NODE_MIN_WIDTH}
+        maxWidth={Infinity}
+        minHeight={minimized ? NODE_MINIMIZED_HEIGHT : NODE_MIN_HEIGHT}
+        maxHeight={minimized ? NODE_MINIMIZED_HEIGHT : Infinity}
+      />
 
       {minimized ? (
         <div className="pcenode__minimized">

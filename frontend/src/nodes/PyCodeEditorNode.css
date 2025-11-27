@@ -199,16 +199,20 @@
 .pcenode--minimized {
   display: flex;
   flex-direction: column;
-  height: auto;
-  padding: 7px 11.5px;
+  width: 100%;
+  height: 100%;
 }
 .pcenode__minimized {
+  flex: 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
+  /* padding: 7px 11.5px; */
 }
 .pcenode__minimizedRunBtn {
   flex: 1;
+  width: 100%;
+  height: 100%;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   padding: 8px 12px; /* was 4px 8px */
@@ -216,6 +220,11 @@
   color: #fff;
   font-size: 16px; /* was 13px */
   cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center; /* center icon + text */
+  gap: 8px;
 }
 
 .pcenode__minimizedRunBtn {
@@ -268,9 +277,6 @@
 }
 
 .pcenode--minimized {
-  position: relative; /* important for absolute children */
-  display: flex;
-  flex-direction: column;
   height: auto;
   padding: 7px 11.5px;
 }

@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useState } from "react";
 import type { NodeProps, Node } from "@xyflow/react";
-import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { Handle, Position, useReactFlow, NodeResizer } from "@xyflow/react";
 import BaseGrammarNode, { BaseNodeData } from "./BaseGrammarNode";
 import schema from "../schemas/widgetDef.json";
 
@@ -18,7 +18,7 @@ export type WidgetDefNode = Node<WidgetDefNodeData, "widgetDefNode">;
 
 const NODE_MIN_WIDTH = 300;
 const NODE_MIN_HEIGHT = 180;
-const NODE_MINIMIZED_WIDTH = 280;
+const NODE_MINIMIZED_WIDTH = 150;
 const NODE_MINIMIZED_HEIGHT = 48;
 
 const WidgetDefNode = memo(function WidgetDefNode(
@@ -147,6 +147,12 @@ const WidgetDefNode = memo(function WidgetDefNode(
         />
       ) : (
         <div className="gnode gnode--minimized">
+          <NodeResizer
+            minWidth={minimized ? NODE_MINIMIZED_WIDTH : NODE_MIN_WIDTH}
+            maxWidth={Infinity}
+            minHeight={minimized ? NODE_MINIMIZED_HEIGHT : NODE_MIN_HEIGHT}
+            maxHeight={minimized ? NODE_MINIMIZED_HEIGHT : Infinity}
+          />
           <div className="gnode__minimized">
             {/* Big fetch button */}
             <button type="button" className="gnode__minimizedNodeTtitleBtn">
