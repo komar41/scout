@@ -19,6 +19,7 @@ export const physicalLayerTemplate = {
   physical_layer: {
     id: "baselayer-0",
     type: "vector",
+    file_type: "feather",
     datafile: "chicago",
     region_of_interest: {
       type: "bbox",
@@ -43,6 +44,7 @@ export const viewTemplate = {
     {
       physical_layer: { ref: "baselayer-0" },
       type: "vector",
+      file_type: "geojson",
       zoom_pan: true,
       layers: [
         {

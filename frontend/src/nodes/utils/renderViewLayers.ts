@@ -1,4 +1,4 @@
-// src/nodes/utils/renderPhysicalLayers.ts
+// src/nodes/utils/renderLayers.ts
 import * as d3 from "d3";
 import L from "leaflet";
 import { getPropertyRangeFromGeoJSON, pickInterpolator } from "./helper";
@@ -6,8 +6,10 @@ import { applyGeometryInteractions } from "./geomInteractions";
 import type { InteractionSpec } from "./geomInteractions";
 import type { ParsedView, ParsedInteraction } from "./types";
 
+import * as GeoTIFF from "geotiff";
+
 type TagGroup = d3.Selection<SVGGElement, unknown, null, undefined>;
-const rasterOverlays = new Set<L.ImageOverlay>();
+const rasterOverlays = new Set<L.Layer>();
 /**
  * Map ParsedInteraction -> InteractionSpec for a given layer.
  */
@@ -22,6 +24,50 @@ function tileBoundsFromXYZ(x: number, y: number, z: number, map: L.Map) {
   const seLatLng = map.unproject(sePoint, z);
 
   return L.latLngBounds(nwLatLng, seLatLng);
+}
+
+function colorToRgb(str: string): [number, number, number] {
+  if (!str) return [0, 0, 0];
+
+  const s = str.trim();
+
+  // Handle hex: #rgb or #rrggbb
+  if (s[0] === "#") {
+    let hex = s.slice(1);
+    if (hex.length === 3) {
+      // e.g. "f0a" -> "ff00aa"
+      hex = hex
+        .split("")
+        .map((c) => c + c)
+        .join("");
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return [
+        Number.isFinite(r) ? r : 0,
+        Number.isFinite(g) ? g : 0,
+        Number.isFinite(b) ? b : 0,
+      ];
+    }
+  }
+
+  // Handle "rgb(r,g,b)" / "rgba(r,g,b,a)"
+  if (s.startsWith("rgb")) {
+    const nums = s
+      .replace(/[^\d,]/g, "")
+      .split(",")
+      .map((x) => Number(x));
+    return [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0];
+  }
+
+  // Fallback: try to extract any numbers in order
+  const nums = s
+    .replace(/[^\d,]/g, "")
+    .split(",")
+    .map((x) => Number(x));
+  return [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0];
 }
 
 function buildInteractionSpecsForLayer(opts: {
@@ -159,6 +205,171 @@ async function renderRasterForView(opts: {
   return unionBounds ? unionBounds.extend(rasterBounds) : rasterBounds;
 }
 
+async function renderGeoTiffForView(opts: {
+  map: L.Map;
+  view: ParsedView;
+  layerId: string;
+  unionBounds: L.LatLngBounds | null;
+}): Promise<L.LatLngBounds | null> {
+  const { map, view, layerId, unionBounds } = opts;
+
+  const cacheBust = Date.now();
+
+  console.log(`[Viewport] Rendering GeoTIFF for layer ${layerId}`);
+  const url = `http://127.0.0.1:5000/generated/raster/${layerId}.tif?v=${cacheBust}`;
+
+  const colormapName =
+    (view as any).colormap || (view as any).fill?.colormap || undefined;
+
+  console.log("[GeoTIFF] colormapName =", colormapName);
+
+  const interpolator =
+    colormapName != null ? pickInterpolator(colormapName) : null;
+
+  let tiff: GeoTIFF.GeoTIFF;
+  try {
+    tiff = await GeoTIFF.fromUrl(url);
+  } catch (err) {
+    console.error(`[Viewport] Failed to load GeoTIFF ${url}`, err);
+    return unionBounds;
+  }
+
+  let image: GeoTIFF.IFD;
+  try {
+    image = await tiff.getImage();
+  } catch (err) {
+    console.error("[Viewport] Failed to get GeoTIFF image", err);
+    return unionBounds;
+  }
+
+  const width = image.getWidth();
+  const height = image.getHeight();
+  const samplesPerPixel = image.getSamplesPerPixel();
+
+  console.log(
+    "[GeoTIFF] width/height =",
+    width,
+    height,
+    "samplesPerPixel =",
+    samplesPerPixel
+  );
+
+  const [minX, minY, maxX, maxY] = image.getBoundingBox();
+  const bounds = L.latLngBounds([minY, minX], [maxY, maxX]);
+
+  let rasters: any[];
+  try {
+    rasters = (await image.readRasters()) as any[];
+  } catch (err) {
+    console.error("[Viewport] Failed to read GeoTIFF rasters", err);
+    return unionBounds;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.error("[Viewport] Could not get 2D context for GeoTIFF canvas");
+    return unionBounds;
+  }
+
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+
+  const band0 = rasters[0] as any;
+
+  if (interpolator) {
+    // ---------- scalar + colormap path (Viridis, Plasma, etc.) ----------
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (let i = 0; i < band0.length; i++) {
+      const v = band0[i];
+      if (!Number.isFinite(v)) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    console.log("[GeoTIFF] band0 min/max =", min, max);
+
+    const hasRange = max > min && Number.isFinite(min) && Number.isFinite(max);
+
+    for (let i = 0; i < width * height; i++) {
+      const v = band0[i];
+
+      if (!Number.isFinite(v) || !hasRange) {
+        data[4 * i + 3] = 0; // transparent nodata / degenerate
+        continue;
+      }
+
+      const t = (v - min) / (max - min); // 0..1
+      const color = interpolator(t); // "#21918c" or "rgb(...)"
+      const [r, g, b] = colorToRgb(color);
+
+      data[4 * i + 0] = r;
+      data[4 * i + 1] = g;
+      data[4 * i + 2] = b;
+      data[4 * i + 3] = 255;
+    }
+  } else if (samplesPerPixel >= 3) {
+    // ---------- RGB path (no colormap requested) ----------
+    const rBand = rasters[0];
+    const gBand = rasters[1];
+    const bBand = rasters[2];
+
+    for (let i = 0; i < width * height; i++) {
+      const r = rBand[i];
+      const g = gBand[i];
+      const b = bBand[i];
+
+      data[4 * i + 0] = Number.isFinite(r) ? Math.max(0, Math.min(255, r)) : 0;
+      data[4 * i + 1] = Number.isFinite(g) ? Math.max(0, Math.min(255, g)) : 0;
+      data[4 * i + 2] = Number.isFinite(b) ? Math.max(0, Math.min(255, b)) : 0;
+      data[4 * i + 3] = 255;
+    }
+  } else {
+    // ---------- single-band grayscale fallback ----------
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (let i = 0; i < band0.length; i++) {
+      const v = band0[i];
+      if (!Number.isFinite(v)) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    const hasRange = max > min && Number.isFinite(min) && Number.isFinite(max);
+    const scale = hasRange ? 255 / (max - min) : 1;
+
+    for (let i = 0; i < width * height; i++) {
+      const v = band0[i];
+      let value = 0;
+      if (Number.isFinite(v) && hasRange) {
+        value = (v - min) * scale;
+      }
+      value = Math.max(0, Math.min(255, value));
+
+      data[4 * i + 0] = value;
+      data[4 * i + 1] = value;
+      data[4 * i + 2] = value;
+      data[4 * i + 3] = Number.isFinite(v) ? 255 : 0;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+
+  const dataUrl = canvas.toDataURL("image/png");
+  const opacity = (view as any).opacity ?? 1;
+
+  const overlay = L.imageOverlay(dataUrl, bounds, { opacity });
+  overlay.addTo(map);
+  rasterOverlays.add(overlay);
+
+  return unionBounds ? unionBounds.extend(bounds) : bounds;
+}
+
 export async function renderLayers(opts: {
   id: string;
   map: L.Map;
@@ -212,8 +423,16 @@ export async function renderLayers(opts: {
     const thId = view.thematicLayerRef;
     if (!thId) continue;
 
-    if (view.type === "raster") {
+    if (view.type === "raster" && view.file_type === "png") {
       unionBounds = await renderRasterForView({
+        map,
+        view,
+        layerId: thId,
+        unionBounds,
+      });
+    } else if (view.file_type === "tif" || view.file_type === "tiff") {
+      console.log("Rendering thematic GeoTIFF view:", thId);
+      unionBounds = await renderGeoTiffForView({
         map,
         view,
         layerId: thId,
@@ -224,11 +443,12 @@ export async function renderLayers(opts: {
 
   // --- Physical views ---
   for (const view of physicalViews) {
+    console.log(view.file_type);
     const plId = view.physicalLayerRef;
     if (!plId) continue;
 
     // Physical raster views
-    if (view.type === "raster") {
+    if (view.type === "raster" && view.file_type === "png") {
       unionBounds = await renderRasterForView({
         map,
         view,
@@ -239,14 +459,10 @@ export async function renderLayers(opts: {
     }
 
     // Only handle vector physical views here
-    if (view.type !== "vector") continue;
-
-    // Find matching physical layer
-    // const pl = physicalLayers.find((p) => p.id === plId);
-
-    // console.log(`[Viewport ${id}] Rendering physical layer ${plId}...`);
+    if (!(view.type === "vector" && view.file_type === "geojson")) continue;
 
     // If you’ve already moved zIndex into ParsedLayer, just sort on a.zIndex / b.zIndex
+
     const layers = [...(view.layers ?? [])].sort((a: any, b: any) => {
       const za = (a as any).zIndex ?? 0;
       const zb = (b as any).zIndex ?? 0;

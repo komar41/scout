@@ -8,6 +8,7 @@ export function parseView(raw: any): ParsedView[] {
     const base: ParsedView = {
       physicalLayerRef: v.physical_layer?.ref,
       thematicLayerRef: v.thematic_layer?.ref,
+      file_type: v["file_type"],
       type: v.type,
       zoom_level: v.zoom_level ?? 16,
       layers: v.layers ?? [],
@@ -15,6 +16,10 @@ export function parseView(raw: any): ParsedView[] {
 
     if (v.type === "raster") {
       (base as ParsedView).opacity = v.opacity ?? 1;
+    }
+
+    if (v.type === "raster" && v.file_type === "tif") {
+      (base as ParsedView).colormap = v.colormap ?? "Reds";
     }
 
     if (v.type == "vector" && Array.isArray(v.layers)) {

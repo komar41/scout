@@ -403,14 +403,19 @@ export function renderNumberInputWidget(
 
   const min = widget.min;
   const max = widget.max;
-  const step = widget.step ?? 1;
+  const step: number | undefined =
+    typeof widget.step === "number" ? widget.step : undefined;
 
-  const currentVal =
+  const currentVal: number | null =
     typeof value === "number"
       ? value
       : typeof widget["default-value"] === "number"
       ? widget["default-value"]
       : null;
+
+  const handleChange = (v: number | null) => {
+    onValueChange?.(widget.id, variable, v);
+  };
 
   return (
     <div style={{ width: "100%", marginTop: "4px" }}>
@@ -422,7 +427,8 @@ export function renderNumberInputWidget(
         step={step}
         value={currentVal}
         placeholder={widget.placeholder}
-        onChange={(v) => onValueChange?.(widget.id, variable, v)}
+        onChange={handleChange}
+        showStepper={!widget.hideStepper} // 👈 hook from WidgetDef
       />
     </div>
   );

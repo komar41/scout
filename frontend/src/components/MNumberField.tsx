@@ -14,6 +14,21 @@ function SSRInitialFilled(_: BaseNumberField.Root.Props) {
 }
 SSRInitialFilled.muiName = "Input";
 
+type MNumberFieldProps = {
+  id?: string;
+  label?: React.ReactNode;
+  helperText?: string;
+  placeholder?: string;
+  error?: boolean;
+  size?: "small" | "medium";
+  min?: number;
+  max?: number;
+  step?: number; // can be float
+  value: number | null;
+  onChange: (v: number | null) => void;
+  showStepper?: boolean; // 👈 NEW (default true)
+};
+
 export default function MNumberField({
   id: idProp,
   label,
@@ -26,19 +41,8 @@ export default function MNumberField({
   value,
   onChange,
   placeholder,
-}: {
-  id?: string;
-  label?: React.ReactNode;
-  helperText?: string;
-  placeholder?: string;
-  error?: boolean;
-  size?: "small" | "medium";
-  min?: number;
-  max?: number;
-  step?: number;
-  value: number | null;
-  onChange: (v: number | null) => void;
-}) {
+  showStepper = true,
+}: MNumberFieldProps) {
   let id = React.useId();
   if (idProp) id = idProp;
 
@@ -82,42 +86,44 @@ export default function MNumberField({
             onFocus={props.onFocus}
             slotProps={{ input: props }}
             endAdornment={
-              <InputAdornment
-                position="end"
-                sx={{
-                  flexDirection: "column",
-                  maxHeight: "unset",
-                  alignSelf: "stretch",
-                  borderLeft: "1px solid",
-                  borderColor: "divider",
-                  ml: 0,
-                  "& button": {
-                    py: 0,
-                    flex: 1,
-                    borderRadius: 0.5,
-                  },
-                }}
-              >
-                <BaseNumberField.Increment
-                  render={<IconButton size={size} aria-label="Increase" />}
+              showStepper ? ( // 👈 toggle the arrows here
+                <InputAdornment
+                  position="end"
+                  sx={{
+                    flexDirection: "column",
+                    maxHeight: "unset",
+                    alignSelf: "stretch",
+                    borderLeft: "1px solid",
+                    borderColor: "divider",
+                    ml: 0,
+                    "& button": {
+                      py: 0,
+                      flex: 1,
+                      borderRadius: 0.5,
+                    },
+                  }}
                 >
-                  <KeyboardArrowUpIcon
-                    fontSize={size}
-                    sx={{ transform: "translateY(2px)" }}
-                  />
-                </BaseNumberField.Increment>
+                  <BaseNumberField.Increment
+                    render={<IconButton size={size} aria-label="Increase" />}
+                  >
+                    <KeyboardArrowUpIcon
+                      fontSize={size}
+                      sx={{ transform: "translateY(2px)" }}
+                    />
+                  </BaseNumberField.Increment>
 
-                <BaseNumberField.Decrement
-                  render={<IconButton size={size} aria-label="Decrease" />}
-                >
-                  <KeyboardArrowDownIcon
-                    fontSize={size}
-                    sx={{ transform: "translateY(-2px)" }}
-                  />
-                </BaseNumberField.Decrement>
-              </InputAdornment>
+                  <BaseNumberField.Decrement
+                    render={<IconButton size={size} aria-label="Decrease" />}
+                  >
+                    <KeyboardArrowDownIcon
+                      fontSize={size}
+                      sx={{ transform: "translateY(-2px)" }}
+                    />
+                  </BaseNumberField.Decrement>
+                </InputAdornment>
+              ) : undefined
             }
-            sx={{ pr: 0 }}
+            sx={{ pr: showStepper ? 0 : undefined }}
           />
         )}
       />

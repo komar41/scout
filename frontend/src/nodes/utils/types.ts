@@ -11,6 +11,7 @@ export type ViewDef = {
   physical_layer?: { ref: string };
   thematic_layer?: { ref: string };
   type: string;
+  file_type?: string;
   zoom_pan?: boolean;
   layers?: { tag: string; style: Record<string, any> }[];
   style?: Record<string, any>;
@@ -28,7 +29,9 @@ export type ParsedView = {
   physicalLayerRef?: string;
   thematicLayerRef?: string;
   type?: string;
+  file_type?: string;
   opacity?: string;
+  colormap?: string;
   style?: Record<string, any>;
   // zoom_pan?: boolean;
   zoom_level?: number;

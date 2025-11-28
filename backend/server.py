@@ -1,23 +1,23 @@
 from __future__ import annotations
 from copyreg import pickle
-import gzip
+# import gzip
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, sys, signal, shutil
 from pathlib import Path
 import geopandas as gpd
-from shapely.geometry import Polygon
+# from shapely.geometry import Polygon
 from flask import send_from_directory, abort
 from convert_to_raster import convert_raster
-from deep_umbra import run_shadow_model
-from download_data import download_osm_data, extract_roads, extract_buildings
+# from deep_umbra import run_shadow_model
+# from download_data import download_osm_data, extract_roads, extract_buildings
 import osmnx as ox
 import pickle, gzip
 
 from weather_routing import *
 import subprocess
-import tempfile
+# import tempfile
 
 import threading
 import json as jsonlib
@@ -199,8 +199,16 @@ def list_rasters(plId: str):
 
 @app.get("/generated/raster/<path:filename>")
 def serve_raster(filename: str):
-    # works: http://127.0.0.1:5000/generated/raster/rasters-baselayer-0/16812_24353.png
-    if not filename.lower().endswith(".png"):
+    # Allow only specific raster extensions
+    allowed_exts = {"png", "tif", "tiff"}
+
+    # Get extension (everything after last dot)
+    try:
+      ext = filename.rsplit(".", 1)[1].lower()
+    except IndexError:
+      abort(404)
+
+    if ext not in allowed_exts:
         abort(404)
 
     # Resolve safe absolute path (prevents directory traversal)
@@ -210,15 +218,20 @@ def serve_raster(filename: str):
     except Exception:
         abort(403)  # Forbidden
 
-    # parent directory + file name
     directory = full_path.parent
     file = full_path.name
+
+    # Pick correct mimetype
+    if ext == "png":
+        mimetype = "image/png"
+    else:  # tif / tiff
+        mimetype = "image/tiff"
 
     return send_from_directory(
         directory,
         file,
-        mimetype="image/png",
-        conditional=True
+        mimetype=mimetype,
+        conditional=True,
     )
 
 @app.get("/generated/vector/<path:filename>")

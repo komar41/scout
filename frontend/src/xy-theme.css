@@ -258,3 +258,18 @@
   margin-bottom: 3px;
   display: inline-block;
 }
+
+.react-flow__resize-control.handle {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  width: 8px; /* keep a hitbox if you still want resizing */
+  height: 8px;
+  opacity: 0 !important;
+}
+
+.react-flow__resize-control.line {
+  opacity: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  stroke: none !important;
+}
