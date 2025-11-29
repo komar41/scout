@@ -215,13 +215,13 @@ async function renderGeoTiffForView(opts: {
 
   const cacheBust = Date.now();
 
-  console.log(`[Viewport] Rendering GeoTIFF for layer ${layerId}`);
+  // console.log(`[Viewport] Rendering GeoTIFF for layer ${layerId}`);
   const url = `http://127.0.0.1:5000/generated/raster/${layerId}.tif?v=${cacheBust}`;
 
   const colormapName =
     (view as any).colormap || (view as any).fill?.colormap || undefined;
 
-  console.log("[GeoTIFF] colormapName =", colormapName);
+  // console.log("[GeoTIFF] colormapName =", colormapName);
 
   const interpolator =
     colormapName != null ? pickInterpolator(colormapName) : null;
@@ -245,14 +245,6 @@ async function renderGeoTiffForView(opts: {
   const width = image.getWidth();
   const height = image.getHeight();
   const samplesPerPixel = image.getSamplesPerPixel();
-
-  console.log(
-    "[GeoTIFF] width/height =",
-    width,
-    height,
-    "samplesPerPixel =",
-    samplesPerPixel
-  );
 
   const [minX, minY, maxX, maxY] = image.getBoundingBox();
   const bounds = L.latLngBounds([minY, minX], [maxY, maxX]);
@@ -291,7 +283,7 @@ async function renderGeoTiffForView(opts: {
       if (v > max) max = v;
     }
 
-    console.log("[GeoTIFF] band0 min/max =", min, max);
+    // console.log("[GeoTIFF] band0 min/max =", min, max);
 
     const hasRange = max > min && Number.isFinite(min) && Number.isFinite(max);
 
@@ -415,6 +407,8 @@ export async function renderLayers(opts: {
     return;
   }
 
+  // console.log(thematicViews);
+
   let unionBounds: L.LatLngBounds | null = null;
   const path = makeLeafletPath(map);
 
@@ -423,27 +417,76 @@ export async function renderLayers(opts: {
     const thId = view.thematicLayerRef;
     if (!thId) continue;
 
-    if (view.type === "raster" && view.file_type === "png") {
-      unionBounds = await renderRasterForView({
-        map,
-        view,
-        layerId: thId,
-        unionBounds,
-      });
-    } else if (view.file_type === "tif" || view.file_type === "tiff") {
-      console.log("Rendering thematic GeoTIFF view:", thId);
-      unionBounds = await renderGeoTiffForView({
-        map,
-        view,
-        layerId: thId,
-        unionBounds,
-      });
+    if (typeof thId === "string") {
+      if (view.type === "raster" && view.file_type === "png") {
+        unionBounds = await renderRasterForView({
+          map,
+          view,
+          layerId: thId,
+          unionBounds,
+        });
+      } else if (view.file_type === "tif" || view.file_type === "tiff") {
+        // console.log("Rendering thematic GeoTIFF view:", thId);
+        unionBounds = await renderGeoTiffForView({
+          map,
+          view,
+          layerId: thId,
+          unionBounds,
+        });
+      }
+    } else if (Array.isArray(thId)) {
+      if (
+        view.type === "raster" &&
+        view.file_type === "png" &&
+        view.operation === "difference"
+      ) {
+        const diffThId = thId[1] + "_minus_" + thId[0];
+
+        await fetch("http://127.0.0.1:5000/api/diff-png", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dir1: thId[1],
+            dir2: thId[0],
+            colormap: view.colormap || "Reds",
+          }),
+        });
+
+        unionBounds = await renderRasterForView({
+          map,
+          view,
+          layerId: diffThId,
+          unionBounds,
+        });
+      } else if (
+        view.type === "raster" &&
+        (view.file_type === "tif" || view.file_type === "tiff") &&
+        view.operation === "difference"
+      ) {
+        const diffThId = thId[1] + "_minus_" + thId[0];
+        await fetch("http://127.0.0.1:5000/api/diff-tif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tif1: thId[1],
+            tif2: thId[0],
+            colormap: view.colormap || "Reds",
+          }),
+        });
+
+        unionBounds = await renderGeoTiffForView({
+          map,
+          view,
+          layerId: diffThId,
+          unionBounds,
+        });
+      }
     }
   }
 
   // --- Physical views ---
   for (const view of physicalViews) {
-    console.log(view.file_type);
+    // console.log(view.file_type);
     const plId = view.physicalLayerRef;
     if (!plId) continue;
 

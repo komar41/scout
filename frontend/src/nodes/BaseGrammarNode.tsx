@@ -96,8 +96,8 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
 
   const handleTitleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      console.log(e.target.value);
-      console.log(id);
+      // console.log(e.target.value);
+      // console.log(id);
       const nextTitle = e.target.value;
       rf.setNodes((nodes) =>
         nodes.map((n) =>
@@ -122,9 +122,9 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
   }, [data, id, rf]);
 
   const onRun = useCallback(() => {
-    console.log("[run]", id);
+    // console.log("[run]", id);
     if (data?.onRun) return data.onRun(id);
-    console.log("[run]", id);
+    // console.log("[run]", id);
   }, [data, id]);
 
   return (

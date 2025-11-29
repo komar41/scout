@@ -9,10 +9,11 @@ export type PhysicalLayerDef = {
 
 export type ViewDef = {
   physical_layer?: { ref: string };
-  thematic_layer?: { ref: string };
+  thematic_layer?: { ref: string | string[] };
   type: string;
   file_type?: string;
   zoom_pan?: boolean;
+  operation?: string;
   layers?: { tag: string; style: Record<string, any> }[];
   style?: Record<string, any>;
 };
@@ -27,13 +28,13 @@ export type ParsedLayer = {
 
 export type ParsedView = {
   physicalLayerRef?: string;
-  thematicLayerRef?: string;
+  thematicLayerRef?: string | string[];
   type?: string;
   file_type?: string;
   opacity?: string;
   colormap?: string;
+  operation?: string;
   style?: Record<string, any>;
-  // zoom_pan?: boolean;
   zoom_level?: number;
   layers?: ParsedLayer[];
 };

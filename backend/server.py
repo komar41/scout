@@ -13,11 +13,17 @@ from convert_to_raster import convert_raster
 # from deep_umbra import run_shadow_model
 # from download_data import download_osm_data, extract_roads, extract_buildings
 import osmnx as ox
-import pickle, gzip
+import matplotlib
+# import pickle, gzip
+
+import numpy as np
+import cv2
 
 from weather_routing import *
 import subprocess
 # import tempfile
+
+import rasterio
 
 import threading
 import json as jsonlib
@@ -393,6 +399,109 @@ def run_python():
             "stderr": f"Worker error: {e}",
             "returncode": -1,
         }), 200
+    
+def diff_colormap_dirs(dir1_, dir2_, colormap='Reds'):
+    dir1 = Path(raster_subdir, dir1_)
+    dir2 = Path(raster_subdir, dir2_)
+    output_path = Path(raster_subdir, dir1_ + "_minus_" + dir2_)
+
+    if output_path.exists():
+        shutil.rmtree(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    for png1 in sorted(dir1.glob("*.png")):
+        png2 = dir2 / png1.name
+        if not png2.exists():
+            print(f"Skipping {png1.name}: not found in {dir2}")
+            continue
+        
+        img1 = cv2.imread(str(png1))
+        img2 = cv2.imread(str(png2))
+
+        if img1 is None or img2 is None:
+            print(f"Skipping {png1.name}: failed to read one of the images")
+            continue
+
+        gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+
+        diff = cv2.absdiff(gray2, gray1).astype(np.float32)
+
+        dmin, dmax = diff.min(), diff.max()
+        if dmax > dmin:
+            diff_norm = (diff - dmin) / (dmax - dmin)
+        else:
+            diff_norm = np.zeros_like(diff)
+
+        cmap = matplotlib.colormaps[colormap]
+        rgba = cmap(diff_norm)
+        rgb = (rgba[:, :, :3] * 255).astype("uint8")
+
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(str(output_path / png1.name), bgr)
+
+    return output_path
+
+@app.route("/api/diff-png", methods=["POST"])
+def api_diff_png():
+    data = request.get_json(force=True)
+    dir1 = data.get("dir1")
+    dir2 = data.get("dir2")
+    colormap = data.get("colormap", "Reds")
+
+    if not dir1 or not dir2:
+        return jsonify({"error": "dir1 and dir2 are required"}), 400
+
+    out_dir = diff_colormap_dirs(dir1, dir2, colormap)
+    return jsonify({
+        "status": "ok",
+        "output_dir": str(out_dir),
+    })
+
+def diff_tif_files(tif1_name_, tif2_name_):
+
+    tif1_name = tif1_name_ + ".tif"
+    tif2_name = tif2_name_ + ".tif"
+
+    tif1_path = Path(raster_subdir, tif1_name)
+    tif2_path = Path(raster_subdir, tif2_name)
+
+    out_name = f"{tif1_name_}_minus_{tif2_name_}.tif"
+    out_path = Path(raster_subdir, out_name)
+
+    with rasterio.open(tif1_path) as r1, rasterio.open(tif2_path) as r2:
+        arr1 = r1.read(1).astype("float32")
+        arr2 = r2.read(1).astype("float32")
+
+        # Difference: scenario2 - scenario1
+        diff = np.abs(arr2 - arr1)
+
+        profile = r1.profile
+        profile.update(
+            dtype="float32",
+            count=1,
+        )
+
+        with rasterio.open(out_path, "w", **profile) as dst:
+            dst.write(diff, 1)
+
+    return out_path
+
+@app.route("/api/diff-tif", methods=["POST"])
+def api_diff_tif():
+    data = request.get_json(force=True)
+    tif1 = data.get("tif1")
+    tif2 = data.get("tif2")
+
+    if not tif1 or not tif2:
+        return jsonify({"error": "tif1 and tif2 are required"}), 400
+
+    out_path = diff_tif_files(tif1, tif2)
+
+    return jsonify({
+        "status": "ok",
+        "output_tif": str(out_path),
+    })
 
 
 if __name__ == '__main__':

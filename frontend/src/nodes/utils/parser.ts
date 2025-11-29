@@ -8,6 +8,7 @@ export function parseView(raw: any): ParsedView[] {
     const base: ParsedView = {
       physicalLayerRef: v.physical_layer?.ref,
       thematicLayerRef: v.thematic_layer?.ref,
+      operation: v.operation ?? undefined,
       file_type: v["file_type"],
       type: v.type,
       zoom_level: v.zoom_level ?? 16,
@@ -18,7 +19,8 @@ export function parseView(raw: any): ParsedView[] {
       (base as ParsedView).opacity = v.opacity ?? 1;
     }
 
-    if (v.type === "raster" && v.file_type === "tif") {
+    if (v.type === "raster") {
+      // Have to later set colormap for pngs as well but from backend
       (base as ParsedView).colormap = v.colormap ?? "Reds";
     }
 
