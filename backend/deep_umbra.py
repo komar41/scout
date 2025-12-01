@@ -463,7 +463,6 @@ def get_deep_shadow():
         )
         model.restore('models/shadow')
         _DEEP_SHADOW = model
-
     return _DEEP_SHADOW
         
 def run_shadow_model(input, season, colormap, output):

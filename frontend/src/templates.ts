@@ -130,7 +130,7 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   // join: "join",
   transformation: "transformation",
   interaction: "interaction",
-  widget_def: "widget definition",
+  widget_def: "widget",
 };
 
 // -------------------------------------------
@@ -158,11 +158,13 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 
 // from convert_to_raster import convert_raster
 
-// input = "baselayer-0"
+// ref = "A"
+// input = "%s"%(ref)
+// output = "%s_rasters"%(ref)
+
 // tag = "buildings"
 // feature = "height"
 // zoom = 16
-// output = "rasters-baselayer-0"
 
 // convert_raster(input, tag, feature, zoom, output)
 
@@ -172,7 +174,11 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
 
 // from deep_umbra import run_shadow_model
 
-// input = 'rasters-baselayer-0'
-// output = 'acc-shadow-baselayer-0'
+// ref = "A"
+// input = '%s_rasters'%(ref)
+// output = '%s_shadow'%(ref)
+
+// # season = 'winter'
+// # colormap = 'Blues'
 
 // run_shadow_model(input, season, colormap, output)
