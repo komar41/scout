@@ -17,7 +17,18 @@ import restartPng from "../assets/restart.png";
 export type GrammarValue = unknown;
 
 const nodeColor: Record<string, string> = {
+  physical_layer: "#f5d1d2",
+  data_layer: "#f5d1d2",
+  join: "#f5d1d2",
+  interaction: "#D2E4F0",
+  view: "#D3E8DA",
+  widget: "#D2E4F0",
+  comparison: "#D2E4F0",
+};
+
+const nodeBorderColor: Record<string, string> = {
   physical_layer: "#cb181d",
+  data_layer: "#cb181d",
   join: "#cb181d",
   interaction: "#1f78b4",
   view: "#238b45",
@@ -147,7 +158,11 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
       {/* Header */}
       <div
         className="gnode__header"
-        style={{ backgroundColor: nodeColor[key] ?? "#444" }}
+        // style={{ backgroundColor: nodeColor[key] ?? "#444" }}
+        style={{
+          backgroundColor: nodeColor[key] ?? "#444",
+          borderColor: nodeBorderColor[key] ?? "#000",
+        }}
       >
         <div className="gnode__title">
           <input
@@ -192,14 +207,14 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
             height="100%"
           />
         </div>
-        {!isValid && errors.length > 0 && (
+        {/* {!isValid && errors.length > 0 && (
           <div className="gnode__errors">
             <div className="gnode__errorsTitle">Schema errors:</div>
             {errors.map((e, i) => (
               <div key={i}>• {e}</div>
             ))}
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Footer action bar */}

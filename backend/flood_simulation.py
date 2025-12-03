@@ -153,8 +153,8 @@ def simulate_flood_projection(
 
         # save to CSV
         df = pd.DataFrame([{
-            "flood depth (median)": median_val,
-            "flood depth (mean)": mean_val,
+            "median flood depth": median_val,
+            "mean flood depth": mean_val,
             # "flood depth (max)": max_val,
             # "flood depth (min)": min_val,
             # "flood depth stddev": stddev_val

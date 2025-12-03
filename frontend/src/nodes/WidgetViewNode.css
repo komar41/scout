@@ -23,7 +23,8 @@
   padding: 10px 12px;
   /* font-weight: 500; */
   font-size: 16px;
-  background: #1f78b4;
+  background: #d2e4f0;
+  border: 1.5px solid #1f78b4;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
 }
@@ -36,7 +37,7 @@
 .wvnode__iconBtn {
   border: none;
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: #000;
   width: 24px;
   height: 24px;
   text-align: center;
@@ -72,7 +73,7 @@
 }
 
 .wvnode__title {
-  color: #fff;
+  color: #000;
 }
 
 .wvnode__body {

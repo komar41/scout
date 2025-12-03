@@ -19,8 +19,8 @@
   padding: 0 8px;
   /* font-weight: 500; */
   font-size: 16px;
-  border-bottom: 1px solid #eee;
-  background: #cb181d;
+  border: 1.5px solid #cb181d;
+  background: #f5d1d2;
   color: #fff;
   user-select: none;
   border-top-left-radius: 12px;
@@ -65,7 +65,7 @@
 .gnode__iconBtn {
   border: none;
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: #000;
   width: 24px;
   height: 24px;
   text-align: center;
@@ -193,7 +193,7 @@
   border: none;
   outline: none;
   background: transparent;
-  color: #fff;
+  color: #000;
   font: inherit;
   padding: 0;
 }
