@@ -9,6 +9,7 @@ from shapely.geometry import LineString, mapping
 import json
 import os
 from collections import defaultdict
+import pandas as pd
 
 _data_loader = None
 
@@ -37,6 +38,7 @@ def time_to_global_index(time_string, start_time):
 
 def calculate_weather_route(datafile,
                             input,
+                            outputs,
                             origin_, 
                             destination_,
                             # bbox,
@@ -338,7 +340,7 @@ def calculate_weather_route(datafile,
         if fname.startswith(f"{input}_fastest-route") or fname.startswith(f"{input}_weighted-route") or fname.startswith(f"{input}_rain-aware-route") or fname.startswith(f"{input}_heat-aware-route") or fname.startswith(f"{input}_wind-aware-route") or fname.startswith(f"{input}_humidity-aware-route"):
             os.remove(os.path.join(out_dir, fname))
 
-    
+    j = 0 # current hacky solution! will need to fix this
     for route in routes_data:
         weight_type = route["weight_type"]
 
@@ -366,18 +368,37 @@ def calculate_weather_route(datafile,
             },
         }
 
+        metric_path = f"./data/served/metric/{outputs[j]}.csv"
+
+        df = pd.DataFrame([{
+            "distance": route["distance"],
+            "duration": route["duration"],
+            "rain_exposure": route["rain_exposure"],
+            "heat_exposure": route["heat_exposure"],
+            "wind_exposure": route["wind_exposure"],
+            "humidity_exposure": route["humidity_exposure"],
+        }])
+
+        os.makedirs(os.path.dirname(metric_path), exist_ok=True)
+        df.to_csv(metric_path, index=False)
+        print(f"Saved metrics to {metric_path}")
+
+        j += 1
+
         by_weight[weight_type].append(feature)
 
-    # Now write one file per weight_type
+    j = 0 # current hacky solution! will need to fix this
     for weight_type, features in by_weight.items():
         feature_collection = {
             "type": "FeatureCollection",
             "features": features,
         }
 
-        fname = f"{input}_{weight_type}.geojson"
+        # fname = f"{input}_{weight_type}.geojson"
+        fname = f"route_{outputs[j]}.geojson"
         with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
             json.dump(feature_collection, f)
+        j += 1
 
     # Finally save origin and destination as separate geojson files
 
@@ -421,10 +442,10 @@ def calculate_weather_route(datafile,
         ],
     }
 
-    with open(os.path.join(out_dir, f"{input}_origin.geojson"), "w", encoding="utf-8") as f:
+    with open(os.path.join(out_dir, f"route_origin.geojson"), "w", encoding="utf-8") as f:
         json.dump(origin_feature, f)
 
-    with open(os.path.join(out_dir, f"{input}_destination.geojson"), "w", encoding="utf-8") as f:
+    with open(os.path.join(out_dir, f"route_destination.geojson"), "w", encoding="utf-8") as f:
         json.dump(destination_feature, f)
 
     return

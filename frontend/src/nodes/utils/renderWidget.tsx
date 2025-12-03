@@ -264,7 +264,7 @@ export function renderDropdownWidget(
   }
 
   return (
-    <div style={{ width: "100%", marginTop: "4px" }}>
+    <div style={{ width: "100%", marginTop: "-6px" }}>
       <Autocomplete
         options={items}
         multiple={multiple}
@@ -457,7 +457,12 @@ export function renderSliderWidget(
   const isVertical = orientation === "vertical";
 
   return (
-    <div className="nodrag" style={{ width: "100%" }}>
+    <div
+      className="nodrag"
+      style={{
+        width: "100%",
+      }}
+    >
       {/* Title */}
       <div
         style={{
@@ -519,7 +524,9 @@ export function renderSliderWidget(
         </div>
       ) : (
         //
-        <>
+        <div style={{ padding: "0 16px" }}>
+          {" "}
+          {/* 🔹 equal left/right space */}
           <Slider
             value={currentVal}
             min={min}
@@ -534,7 +541,6 @@ export function renderSliderWidget(
             }}
             sx={{ mt: 1 }}
           />
-
           <div
             style={{
               display: "flex",
@@ -547,7 +553,7 @@ export function renderSliderWidget(
             <span>{min}</span>
             <span>{max}</span>
           </div>
-        </>
+        </div>
       )}
 
       {widget.description && (
