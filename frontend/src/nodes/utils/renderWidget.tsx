@@ -428,7 +428,7 @@ export function renderNumberInputWidget(
         value={currentVal}
         placeholder={widget.placeholder}
         onChange={handleChange}
-        showStepper={!widget.hideStepper} // 👈 hook from WidgetDef
+        showStepper={!widget.hideStepper}
       />
     </div>
   );
@@ -518,7 +518,7 @@ export function renderSliderWidget(
           </div>
         </div>
       ) : (
-        // 🔹 Horizontal layout: labels left/right
+        //
         <>
           <Slider
             value={currentVal}

@@ -340,6 +340,15 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
 
         <Handle
           type="target"
+          position={Position.Bottom}
+          id="viewport-in-3"
+          className={`pcenode__handle ${
+            minimized ? "pcenode__handle--hidden" : ""
+          }`}
+        />
+
+        <Handle
+          type="target"
           position={Position.Left}
           id="viewport-in-2"
           className={`pcenode__handle pcenode__handle--left ${

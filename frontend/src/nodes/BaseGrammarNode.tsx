@@ -16,6 +16,15 @@ import restartPng from "../assets/restart.png";
 
 export type GrammarValue = unknown;
 
+const nodeColor: Record<string, string> = {
+  physical_layer: "#cb181d",
+  join: "#cb181d",
+  interaction: "#1f78b4",
+  view: "#238b45",
+  widget: "#1f78b4",
+  comparison: "#1f78b4",
+};
+
 export type BaseNodeData = {
   value: GrammarValue;
   title?: string;
@@ -127,12 +136,19 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
     // console.log("[run]", id);
   }, [data, id]);
 
+  const obj = data.value as Record<string, any>;
+  const key = Object.keys(obj)[0];
+
+  // console.log(key);
   return (
     <div className="gnode">
       <NodeResizer minWidth={300} minHeight={180} />
 
       {/* Header */}
-      <div className="gnode__header">
+      <div
+        className="gnode__header"
+        style={{ backgroundColor: nodeColor[key] ?? "#444" }}
+      >
         <div className="gnode__title">
           <input
             type="text"
@@ -142,13 +158,13 @@ const BaseGrammarNode = memo(function BaseGrammarNode({
           />
         </div>
         <div className="gnode__headerActions">
-          <span
+          {/* <span
             className={`gnode__badge ${
               overallValid ? "is-valid" : "is-invalid"
             }`}
           >
             {overallValid ? "VALID" : "INVALID"}
-          </span>
+          </span> */}
           <button
             type="button"
             className="gnode__iconBtn"

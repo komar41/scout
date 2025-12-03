@@ -1,6 +1,7 @@
 import tensorflow as tf
 import os
 import numpy as np
+import pandas as pd
 import cv2
 import platform
 from pathlib import Path
@@ -487,6 +488,7 @@ def run_shadow_model(input, season, colormap, output):
         for file in out_dir.iterdir():
             file.unlink()
 
+    all_vals = []
     for png_path in sorted(in_dir.glob("*.png")):
         stem = png_path.stem  # "16813_24353"
         try:
@@ -499,7 +501,7 @@ def run_shadow_model(input, season, colormap, output):
 
         print(f"[Predicting] I={I}, J={J}")
 
-        _, prediction = predict_shadow(
+        input_height, prediction = predict_shadow(
             deep_shadow.generator,
             str(in_dir),     # the dir path where rasters live
             date,
@@ -516,9 +518,16 @@ def run_shadow_model(input, season, colormap, output):
         # Normalize if needed (OpenCV requires 0–255 uint8)
         arr_min, arr_max = float(arr.min()), float(arr.max())
         if arr_max > arr_min:
-            arr_norm = (arr - arr_min) / (arr_max - arr_min)
+            arr_norm = (arr - (-1.0)) / (1.0 - (-1.0))
         else:
             arr_norm = np.zeros_like(arr)
+
+        # Metric calculation: Have to log it
+        # if winter: 360, if spring: 540, if summer: 720
+        factor = 360 if season == 'winter' else 540 if season == 'spring' else 720
+        # sum_var = np.sum(arr_norm[input_height == 0] * factor)
+        vals = arr_norm[input_height == 0] * factor  # 1D view into arr_norm
+        all_vals.append(vals.ravel())
 
         cmap = cm.get_cmap(colormap)
 
@@ -536,6 +545,30 @@ def run_shadow_model(input, season, colormap, output):
         cv2.imwrite(out_path, bgr)
 
         print(f"Saved: {out_path}")
+
+    metric_path = f"./data/served/metric/{output}.csv"
+
+    if all_vals:
+        all_vals = np.concatenate(all_vals)
+        mean_val = np.mean(all_vals)
+        median_val = np.median(all_vals)
+        max_val = np.max(all_vals)
+        min_val = np.min(all_vals)
+        stddev_val = np.std(all_vals)
+
+        os.makedirs(os.path.dirname(metric_path), exist_ok=True)
+
+        df = pd.DataFrame([{
+            'Mean Acc shadow': mean_val,
+            'Median Acc shadow': median_val,
+            # 'max': max_val,
+            # 'min': min_val,
+            # 'stddev': stddev_val
+        }])
+
+        df.to_csv(metric_path, index=False)
+        print(f"Saved metrics to: {metric_path}")
+
 
 # from deep_umbra import run_shadow_model
 

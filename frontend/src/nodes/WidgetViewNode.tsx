@@ -160,10 +160,10 @@ const WidgetViewNode = memo(function WidgetViewNode({
       )}
 
       <Handle
-        type="target"
+        type="source"
         position={Position.Top}
-        id="viewport-in-1"
-        className={`wvnode__handle__source ${
+        id="widgetView-in-1"
+        className={`wvnode__handle__target ${
           minimized ? "wvnode__handle--hidden" : ""
         }`}
       />
@@ -171,7 +171,7 @@ const WidgetViewNode = memo(function WidgetViewNode({
       <Handle
         type="target"
         position={Position.Left}
-        id="viewport-in-2"
+        id="widgetView-in-2"
         className={`wvnode__handle__source ${
           minimized ? "wvnode__handle--hidden" : ""
         }`}
@@ -180,7 +180,7 @@ const WidgetViewNode = memo(function WidgetViewNode({
       <Handle
         type="source"
         position={Position.Right}
-        id="viewport-out-1"
+        id="widgetView-out-1"
         className={`wvnode__handle__target ${
           minimized ? "wvnode__handle--hidden" : ""
         }`}
@@ -189,7 +189,7 @@ const WidgetViewNode = memo(function WidgetViewNode({
       <Handle
         type="source"
         position={Position.Bottom}
-        id="viewport-out-2"
+        id="widgetView-out-2"
         className={`wvnode__handle__target ${
           minimized ? "wvnode__handle--hidden" : ""
         }`}

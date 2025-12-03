@@ -4,6 +4,8 @@ import geopandas as gpd
 from shapely.geometry import mapping
 from rasterio.mask import mask
 import numpy as np
+import pandas as pd
+import os
 
 
 def simulate_flood_projection(
@@ -19,7 +21,7 @@ def simulate_flood_projection(
         "Constructed wetlands",
     ],
 ):
-    print(region, output, year, use_NBS_classes)
+    # print(region, output, year, use_NBS_classes)
     dict_use_NBS_classes = {
         21: "Bioswales/Infiltration trenches",
         31: "Permeable pavements",
@@ -137,6 +139,28 @@ def simulate_flood_projection(
             transform=out_transform,
             nodata=0.0,  # we now treat 0 as nodata / no flood
         )
+
+        metric_path = f"./data/served/metric/{output}.csv"
+
+        median_val = np.nanmedian(combined)
+        mean_val   = np.nanmean(combined)
+        max_val    = np.nanmax(combined)
+        min_val    = np.nanmin(combined)
+        stddev_val = np.nanstd(combined)
+
+        # ensure folder exists
+        os.makedirs(os.path.dirname(metric_path), exist_ok=True)
+
+        # save to CSV
+        df = pd.DataFrame([{
+            "flood depth (median)": median_val,
+            "flood depth (mean)": mean_val,
+            # "flood depth (max)": max_val,
+            # "flood depth (min)": min_val,
+            # "flood depth stddev": stddev_val
+        }])
+
+        df.to_csv(metric_path, index=False)
 
     # -------------------------------------------------------------------------
     # 5) Write output raster

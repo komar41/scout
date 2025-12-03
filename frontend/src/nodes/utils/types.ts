@@ -81,6 +81,12 @@ export type WidgetDef = {
   [key: string]: any;
 };
 
+export type ComparisonDef = {
+  key: string[];
+  metric: string;
+  encoding: string;
+};
+
 export type WidgetOutput = {
   id: string;
   variable: string;

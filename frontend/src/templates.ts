@@ -2,8 +2,9 @@ export type TemplateKey =
   | "physical_layer"
   | "view"
   | "interaction"
-  | "transformation"
-  | "widget_def";
+  // | "transformation"
+  | "widget_def"
+  | "comparison_def";
 // | "choice"
 // | "join"
 
@@ -113,24 +114,34 @@ export const widgetDefTemplate = {
   },
 };
 
+export const comparisonDefTemplate = {
+  comparison: {
+    key: ["A_shadow", "B_shadow"],
+    metric: "mean",
+    encoding: "bar",
+  },
+};
+
 export const TEMPLATES: Record<TemplateKey, any> = {
   physical_layer: physicalLayerTemplate,
   view: viewTemplate,
   // choice: choiceTemplate,
   // join: joinTemplate,
-  transformation: transformationTemplate,
+  // transformation: transformationTemplate,
   interaction: interactionTemplate,
   widget_def: widgetDefTemplate,
+  comparison_def: comparisonDefTemplate,
 };
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
-  physical_layer: "physical layer",
+  physical_layer: "data layer",
   view: "view",
   // choice: "choice",
   // join: "join",
-  transformation: "transformation",
+  // transformation: "transformation",
   interaction: "interaction",
   widget_def: "widget",
+  comparison_def: "comparison",
 };
 
 // -------------------------------------------

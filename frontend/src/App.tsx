@@ -4,7 +4,6 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
-  Background,
   Controls,
   useReactFlow,
   addEdge,
@@ -25,6 +24,7 @@ import type { ViewportNodeData } from "./nodes/ViewportNode";
 import type { WidgetViewNodeData } from "./nodes/WidgetViewNode";
 import type { PyCodeEditorNodeData } from "./nodes/PyCodeEditorNode";
 import { TransformationNodeData } from "./nodes/TransformationNode";
+import { ComparisonViewNodeData } from "./nodes/ComparisonViewNode";
 
 const defaultEdgeOptions: DefaultEdgeOptions = {
   style: {
@@ -55,6 +55,7 @@ function Canvas() {
       | ViewportNodeData
       | PyCodeEditorNodeData
       | WidgetViewNodeData
+      | ComparisonViewNodeData
     >
   >([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -182,6 +183,42 @@ function Canvas() {
               widget: wDef,
               pushToken: uuid, // 👈 always changes on push
             } as WidgetViewNodeData,
+          };
+        })
+      );
+    },
+    [getNode, getEdges, setNodes]
+  );
+
+  const pushComparisonDefToComparisonView = useCallback(
+    (srcId: string, trgId?: string) => {
+      const src = getNode(srcId);
+      if (!src || src.type !== "comparisonDefNode") return;
+
+      const val: any = (src.data as BaseNodeData).value;
+      const cDef = val?.comparison;
+
+      if (!cDef) return;
+
+      const targetIds = trgId
+        ? [trgId]
+        : getEdges()
+            .filter((e) => e.source === srcId)
+            .map((e) => e.target!)
+            .filter(Boolean);
+
+      // After defining comparisonViewNode
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!targetIds.includes(n.id) || n.type !== "comparisonViewNode")
+            return n;
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              comparison: cDef,
+            } as ComparisonViewNodeData,
           };
         })
       );
@@ -318,6 +355,7 @@ function Canvas() {
         onRunView: pushViewToViewports,
         onRunInteraction: pushInteractionToViewport,
         onRunWidgetDef: pushWidgetDefToWidgetView,
+        onRunComparisonDef: pushComparisonDefToComparisonView,
       });
     },
     [
@@ -327,6 +365,7 @@ function Canvas() {
       pushViewToViewports,
       pushInteractionToViewport,
       pushWidgetDefToWidgetView,
+      pushComparisonDefToComparisonView,
     ]
   );
 
@@ -358,6 +397,15 @@ function Canvas() {
     });
   }, [setNodes, pushWidgetViewToPyCodeEditorNode, handleCloseWidgetView]);
 
+  const addComparisonViewNode = useCallback(() => {
+    const nextId = `comparisonView-${idCounter.current++}`;
+    createComparisonViewNode({
+      id: nextId,
+      setNodes,
+      // onRunComparisonView: ...
+    });
+  }, [setNodes]);
+
   // --- allow only physicalLayerNode -> viewNode
   const allow = useCallback(
     (conn: Connection) => {
@@ -367,6 +415,10 @@ function Canvas() {
       if (!src || !trg) return false;
       const physToView =
         src.type === "physicalLayerNode" && trg.type === "viewNode";
+
+      const physToViewPort =
+        src.type === "physicalLayerNode" && trg.type === "viewportNode";
+
       const viewToViewport =
         src.type === "viewNode" && trg.type === "viewportNode";
       const interactionToViewport =
@@ -381,6 +433,9 @@ function Canvas() {
       const viewportToPyCodeEditor =
         src.type === "viewportNode" && trg.type === "pyCodeEditorNode";
 
+      const viewportToViewport =
+        src.type === "viewportNode" && trg.type === "viewportNode";
+
       const transformationToPyCodeEditor =
         src.type === "transformationNode" && trg.type === "pyCodeEditorNode";
       const PyCodeEditorToView =
@@ -389,14 +444,25 @@ function Canvas() {
       const pyCodeEditorToPyCodeEditor =
         src.type === "pyCodeEditorNode" && trg.type === "pyCodeEditorNode";
 
+      const pyCodeEditorToViewport =
+        src.type === "pyCodeEditorNode" && trg.type === "viewportNode";
+
+      const pyCodeEditorToComparisonDef =
+        src.type === "pyCodeEditorNode" && trg.type === "comparisonDefNode";
+
       const widgetDefToWidgetView =
         src.type === "widgetDefNode" && trg.type === "widgetViewNode";
 
       const widgetViewToPyCodeEditor =
         src.type === "widgetViewNode" && trg.type === "pyCodeEditorNode";
 
+      // After defining comparisonViewNode
+      const comparisonDefToComparisonView =
+        src.type === "comparisonDefNode" && trg.type === "comparisonViewNode";
+
       return (
         physToView ||
+        physToViewPort ||
         viewToViewport ||
         interactionToViewport ||
         viewportToPyCodeEditor ||
@@ -405,7 +471,11 @@ function Canvas() {
         PyCodeEditorToView ||
         pyCodeEditorToPyCodeEditor ||
         widgetDefToWidgetView ||
-        widgetViewToPyCodeEditor
+        widgetViewToPyCodeEditor ||
+        comparisonDefToComparisonView ||
+        pyCodeEditorToViewport ||
+        pyCodeEditorToComparisonDef ||
+        viewportToViewport
       );
     },
     [getNode]
@@ -463,6 +533,14 @@ function Canvas() {
         pushWidgetViewToPyCodeEditorNode(srcId, trgId);
         return;
       }
+
+      if (
+        src.type === "comparisonDefNode" &&
+        trg.type === "comparisonViewNode"
+      ) {
+        pushComparisonDefToComparisonView(srcId, trgId);
+        return;
+      }
     },
     [
       allow,
@@ -474,6 +552,7 @@ function Canvas() {
       pushViewportToTransformation,
       pushWidgetDefToWidgetView,
       pushWidgetViewToPyCodeEditorNode,
+      pushComparisonDefToComparisonView,
     ]
   );
 
@@ -493,13 +572,14 @@ function Canvas() {
         maxZoom={2}
         defaultEdgeOptions={defaultEdgeOptions}
       >
-        <Background />
+        {/* <Background /> */}
         <Controls position="bottom-right" />
         <Toolbar
           onAdd={addNode}
           onAddViewport={addViewport}
           onAddPyCodeEditor={addPyCodeEditorNode}
           onAddWidgetView={addWidgetViewNode}
+          onAddComparisonView={addComparisonViewNode}
         />
       </ReactFlow>
     </div>
@@ -511,11 +591,13 @@ function Toolbar({
   onAddViewport,
   onAddPyCodeEditor,
   onAddWidgetView,
+  onAddComparisonView,
 }: {
   onAdd: (tpl: TemplateKey) => void;
   onAddViewport: () => void;
   onAddPyCodeEditor: () => void;
   onAddWidgetView: () => void;
+  onAddComparisonView: () => void;
 }) {
   const { screenToFlowPosition } = useReactFlow();
   const [open, setOpen] = useState(false);
@@ -551,6 +633,11 @@ function Toolbar({
     onAddWidgetView();
   }, [getDropPosition, onAddWidgetView]);
 
+  const handleAddComparisonView = useCallback(() => {
+    (window as any)._desiredGrammarPos = getDropPosition();
+    onAddComparisonView();
+  }, [getDropPosition, onAddComparisonView]);
+
   return (
     <div className="toolbar">
       <div className="toolbar__dropdown">
@@ -581,16 +668,20 @@ function Toolbar({
         )}
       </div>
 
-      <button onClick={handleAddViewport} className="toolbar__btn">
-        ➕ Viewport
-      </button>
-
       <button onClick={handleAddPyCodeEditor} className="toolbar__btn">
         ➕ Code
       </button>
 
+      <button onClick={handleAddViewport} className="toolbar__btn">
+        ➕ Viewport
+      </button>
+
       <button onClick={handleAddWidgetView} className="toolbar__btn">
         ➕ Widget
+      </button>
+
+      <button onClick={handleAddComparisonView} className="toolbar__btn">
+        ➕ Comparison
       </button>
     </div>
   );
@@ -601,8 +692,9 @@ const kindToType: Record<TemplateKey, keyof typeof nodeTypes> = {
   physical_layer: "physicalLayerNode",
   view: "viewNode",
   interaction: "interactionNode",
-  transformation: "transformationNode",
+  // transformation: "transformationNode",
   widget_def: "widgetDefNode",
+  comparison_def: "comparisonDefNode",
 };
 
 function createGrammarNode({
@@ -614,6 +706,7 @@ function createGrammarNode({
   onRunView,
   onRunInteraction,
   onRunWidgetDef,
+  onRunComparisonDef,
 }: // onRunWidgetView
 {
   id: string;
@@ -633,6 +726,7 @@ function createGrammarNode({
   onRunView: (srcId: string) => void;
   onRunInteraction: (srcId: string) => void;
   onRunWidgetDef: (srcId: string) => void;
+  onRunComparisonDef: (srcId: string) => void;
 }) {
   const pos = (window as any)._desiredGrammarPos ?? { x: 100, y: 100 };
   const type = kindToType[template];
@@ -666,6 +760,8 @@ function createGrammarNode({
           console.log("Transformation node data:", data);
         } else if (node.type === "widgetDefNode") {
           onRunWidgetDef(nodeId);
+        } else if (node.type === "comparisonDefNode") {
+          onRunComparisonDef(nodeId);
         }
       },
     },
@@ -753,6 +849,39 @@ function createWidgetViewNode({
         : undefined,
     },
   };
+  setNodes((nds) => nds.concat(newNode));
+}
+
+function createComparisonViewNode({
+  id,
+  setNodes,
+}: {
+  id: string;
+  setNodes: React.Dispatch<
+    React.SetStateAction<
+      Node<
+        | BaseNodeData
+        | ViewportNodeData
+        | PyCodeEditorNodeData
+        | WidgetViewNodeData
+        | ComparisonViewNodeData
+      >[]
+    >
+  >;
+}) {
+  const pos = { x: 150, y: 150 };
+
+  const newNode: Node<ComparisonViewNodeData> = {
+    id,
+    type: "comparisonViewNode",
+    position: pos,
+    width: 400,
+    height: 300,
+    data: {
+      // Add any necessary data properties here
+    },
+  };
+
   setNodes((nds) => nds.concat(newNode));
 }
 

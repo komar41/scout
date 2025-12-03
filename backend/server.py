@@ -15,7 +15,7 @@ from convert_to_raster import convert_raster
 import osmnx as ox
 import matplotlib
 # import pickle, gzip
-
+import pandas as pd
 import numpy as np
 import cv2
 
@@ -40,9 +40,11 @@ DATA_DIR = Path("data")
 OUT_DIR  = Path("data/served")
 vector_subdir = Path(OUT_DIR / "vector")
 raster_subdir = Path(OUT_DIR / "raster")
+metric_subdir = Path(OUT_DIR / "metric")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 vector_subdir.mkdir(parents=True, exist_ok=True)
 raster_subdir.mkdir(parents=True, exist_ok=True)
+metric_subdir.mkdir(parents=True, exist_ok=True)
 
 def start_worker():
     global worker_proc, worker_python_exe
@@ -503,6 +505,37 @@ def api_diff_tif():
         "output_tif": str(out_path),
     })
 
+@app.post("/api/comparison-view")
+def comparison_view():
+    data = request.get_json(force=True)   # this is your { key: [...], metric: "...", encoding: "..." }
+
+    print("Received comparison view request:", data)
+    key = data.get("key", [])
+    metric = data.get("metric", "")
+    encoding = data.get("encoding", "")
+    unit = data.get("unit", "")
+
+    results = {}   # store metric per layer
+    for k in key:
+        # look for a csv in metric_subdir with name k + ".csv"
+        csv_path = metric_subdir / f"{k}.csv"
+        # read csv to get the metric value
+        df = pd.read_csv(csv_path)
+
+        value = df[metric].iloc[0]
+        results[k] = float(value)
+
+        print(f"{k}: {metric} = {value}")
+        
+
+    return jsonify({
+        "status": "ok",
+        "metric": metric,
+        "unit": unit,
+        "values": results,
+        "encoding": encoding,
+    })
+
 
 if __name__ == '__main__':
     # remove old served before starting
@@ -512,7 +545,8 @@ if __name__ == '__main__':
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     vector_subdir.mkdir(parents=True, exist_ok=True)
     raster_subdir.mkdir(parents=True, exist_ok=True)
-
+    metric_subdir.mkdir(parents=True, exist_ok=True)
+    
     # Start the worker up-front (or you can let send_code_to_worker lazily do it)
     try:
         start_worker()

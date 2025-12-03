@@ -22,7 +22,7 @@
   padding: 10px 12px;
   font-weight: 500;
   font-size: 14px;
-  background: #1b9e77;
+  background: #cb181d;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
 }
@@ -126,7 +126,7 @@
   overflow: hidden;
 }
 .pcenode__editor .cm-editor {
-  background-color: #f7f5ff;
+  /* background-color: #f7f5ff; */
   font-size: 13px;
   text-align: left !important;
 }

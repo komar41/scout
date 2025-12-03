@@ -26,15 +26,25 @@ import WidgetDefNode, {
   WidgetDefNodeData,
 } from "./WidgetDefNode";
 
+import ComparisonDefNode, {
+  ComparisonDefNode as ComparisonDefNodeType,
+  ComparisonDefNodeData,
+} from "./ComparisonDefNode";
+
 import WidgetViewNode, {
   WidgetViewNode as WidgetViewNodeType,
   WidgetViewNodeData,
 } from "./WidgetViewNode";
 
-import TransformationNode, {
-  TransformationNode as TransformationNodeType,
-  TransformationNodeData,
-} from "./TransformationNode";
+// import TransformationNode, {
+//   TransformationNode as TransformationNodeType,
+//   TransformationNodeData,
+// } from "./TransformationNode";
+
+import ComparisonViewNode, {
+  ComparisonViewNode as ComparisonViewNodeType,
+  ComparisonViewNodeData,
+} from "./ComparisonViewNode";
 
 // register all implemented node types
 export const nodeTypes = {
@@ -46,8 +56,10 @@ export const nodeTypes = {
   widgetDefNode: WidgetDefNode,
   widgetViewNode: WidgetViewNode,
   // joinNode: JoinNode,
-  transformationNode: TransformationNode,
+  // transformationNode: TransformationNode,
   // choiceNode: ChoiceNode,
+  comparisonDefNode: ComparisonDefNode,
+  comparisonViewNode: ComparisonViewNode,
 } as const;
 
 // union helpers (extend as you add more)
@@ -56,17 +68,21 @@ export type AnyNode =
   | ViewNodeType
   | ViewportNodeType
   | InteractionNodeType
-  | TransformationNodeType
+  // | TransformationNodeType
   | PyCodeEditorNodeType
   | WidgetDefNodeType
-  | WidgetViewNodeType;
+  | WidgetViewNodeType
+  | ComparisonDefNodeType
+  | ComparisonViewNodeType;
 
 export type AnyNodeData =
   | BaseNodeData
   | ViewNodeData
   | ViewportNodeData
   | InteractionNodeData
-  | TransformationNodeData
+  // | TransformationNodeData
   | PyCodeEditorNodeData
   | WidgetDefNodeData
-  | WidgetViewNodeData;
+  | WidgetViewNodeData
+  | ComparisonDefNodeData
+  | ComparisonViewNodeData;

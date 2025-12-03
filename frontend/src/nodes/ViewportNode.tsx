@@ -450,6 +450,13 @@ const ViewportNode = memo(function ViewportNode({
       />
 
       <Handle
+        type="target"
+        position={Position.Top}
+        id="viewport-in-3"
+        className="vpnode__handle "
+      />
+
+      <Handle
         type="source"
         position={Position.Right}
         id="viewport-out"

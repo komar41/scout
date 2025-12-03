@@ -1,12 +1,12 @@
 /* --- Global editor look --- */
 .cm-editor {
-  background-color: #f7f5ff !important; /* your light purple */
+  /* background-color: #f7f5ff !important; your light purple */
   font-size: 13px !important; /* a bit larger font overall */
 }
 
 /* --- Find bar styling only --- */
 .cm-search {
-  background: #f7f5ff !important; /* same color as editor */
+  /* background: #f7f5ff !important; same color as editor */
   border: 1px solid #6a51a3 !important; /* purple border */
   border-radius: 6px !important;
   font-size: 13px !important;
