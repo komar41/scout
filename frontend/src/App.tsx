@@ -460,6 +460,9 @@ function Canvas() {
       const comparisonDefToComparisonView =
         src.type === "comparisonDefNode" && trg.type === "comparisonViewNode";
 
+      const pyCodeToComparisonView =
+        src.type === "pyCodeEditorNode" && trg.type === "comparisonViewNode";
+
       return (
         physToView ||
         physToViewPort ||
@@ -475,7 +478,8 @@ function Canvas() {
         comparisonDefToComparisonView ||
         pyCodeEditorToViewport ||
         pyCodeEditorToComparisonDef ||
-        viewportToViewport
+        viewportToViewport ||
+        pyCodeToComparisonView
       );
     },
     [getNode]

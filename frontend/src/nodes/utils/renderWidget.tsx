@@ -60,6 +60,9 @@ export function renderWidgetFromWidgetDef(
     case "text":
       return renderTextWidget(widgetDef, value);
 
+    case "text-input":
+      return renderTextInputWidget(widgetDef, value, onValueChange);
+
     default:
       return (
         <div style={{ fontSize: 12 }}>
@@ -67,6 +70,65 @@ export function renderWidgetFromWidgetDef(
         </div>
       );
   }
+}
+
+export function renderTextInputWidget(
+  widget: WidgetDef,
+  value: any,
+  onValueChange?: (widgetId: string, variable: string, value: any) => void
+): React.ReactNode {
+  const variable = widget.variable ?? widget.id;
+
+  const currentVal: string =
+    typeof value === "string"
+      ? value
+      : typeof widget["default-value"] === "string"
+      ? widget["default-value"]
+      : "";
+
+  const inputKind =
+    (widget["input-kind"] as
+      | "text"
+      | "email"
+      | "password"
+      | "search"
+      | "url"
+      | "tel"
+      | undefined) ?? "text";
+
+  const multiline = widget.multiline === true;
+  const maxLength =
+    typeof widget["max-length"] === "number" ? widget["max-length"] : undefined;
+
+  const minRows =
+    typeof (widget as any).minRows === "number" ? (widget as any).minRows : 2;
+  const maxRows =
+    typeof (widget as any).maxRows === "number"
+      ? (widget as any).maxRows
+      : undefined;
+
+  return (
+    <div style={{ width: "100%", marginTop: "4px" }}>
+      <TextField
+        label={widget.title ?? variable}
+        fullWidth
+        size="small"
+        type={inputKind}
+        value={currentVal}
+        onChange={(e) => {
+          onValueChange?.(widget.id, variable, e.target.value);
+        }}
+        placeholder={widget.placeholder}
+        helperText={widget.description || undefined}
+        multiline={multiline}
+        minRows={multiline ? minRows : undefined}
+        maxRows={multiline ? maxRows : undefined}
+        inputProps={{
+          maxLength,
+        }}
+      />
+    </div>
+  );
 }
 
 export function renderTextWidget(
