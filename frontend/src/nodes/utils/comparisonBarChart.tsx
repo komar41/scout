@@ -14,7 +14,7 @@ export function ComparisonBarChart({
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const [width, setWidth] = useState(400);
-  const height = 300;
+  const height = 220;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -38,7 +38,7 @@ export function ComparisonBarChart({
 
     d3.select(svgEl).selectAll("*").remove();
 
-    const margin = { top: 20, right: 0, bottom: 50, left: 40 };
+    const margin = { top: 20, right: 0, bottom: 50, left: 60 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -78,24 +78,24 @@ export function ComparisonBarChart({
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x))
       .selectAll("text")
-      .style("font-size", "13px")
+      .style("font-size", "15px")
       .style("font-family", "Inter, sans-serif");
 
     // X label
     svg
       .append("text")
-      .attr("x", width / 2)
+      .attr("x", width / 2 + 30)
       .attr("y", height - 10)
       .attr("text-anchor", "middle")
-      .style("font-size", "14px")
+      .style("font-size", "16px")
       .style("font-family", "Inter, sans-serif")
       .text("Scenario");
 
     // Y axis
     g.append("g")
-      .call(d3.axisLeft(y).ticks(5))
+      .call(d3.axisLeft(y).ticks(3))
       .selectAll("text")
-      .style("font-size", "13px")
+      .style("font-size", "15px")
       .style("font-family", "Inter, sans-serif");
 
     // 💡 LEFT-SIDE VERTICAL METRIC LABEL
@@ -105,7 +105,7 @@ export function ComparisonBarChart({
       .attr("x", -height / 2)
       .attr("y", 10) // closer to axis; adjust if needed
       .attr("text-anchor", "middle")
-      .style("font-size", "14px")
+      .style("font-size", "16px")
       .style("font-family", "Inter, sans-serif")
       .text(`${metric} (${unit})`);
   }, [values, metric, width, unit]);

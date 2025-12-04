@@ -191,6 +191,11 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
             disabled={running}
             aria-busy={running}
             title={running ? "Running code..." : "Run code"}
+            style={{
+              backgroundColor: "#f5d1d2",
+              borderColor: "#cb181d",
+              color: "#000",
+            }}
           >
             {running ? (
               // Spinner instead of run icon
@@ -203,7 +208,7 @@ const PyCodeEditorNode = memo(function PyCodeEditorNode({
               />
             ) : (
               <img
-                src={runPng2}
+                src={runPng}
                 alt="Run"
                 className="pcenode__minimizedRunIcon"
               />

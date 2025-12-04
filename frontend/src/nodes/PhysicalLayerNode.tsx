@@ -7,6 +7,7 @@ import schema from "../schemas/physical_layer.json";
 
 import fetchPng from "../assets/fetch.png";
 import fetchPng2 from "../assets/fetch_2.png";
+
 import checkPng from "../assets/check-mark.png";
 
 import expandPng from "../assets/expand.png";
@@ -147,6 +148,11 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
             <button
               type="button"
               className="gnode__minimizedFetchBtn"
+              style={{
+                backgroundColor: "#f5d1d2",
+                borderColor: "#cb181d",
+                color: "#000",
+              }}
               onClick={onFetch}
               disabled={loading}
               aria-busy={loading}
@@ -162,7 +168,7 @@ const PhysicalLayerNode = memo(function PhysicalLayerNode(
                 />
               ) : (
                 <img
-                  src={fetchPng}
+                  src={fetchPng2}
                   alt="Fetch data"
                   className="gnode__minimizedIcon"
                 />

@@ -115,7 +115,13 @@ const WidgetViewNode = memo(function WidgetViewNode({
         </div>
       )}
 
-      <div className="wvnode__body">
+      <div
+        className="wvnode__body"
+        // style={{
+        //   border: "1px solid #1f78b4",
+        //   borderRadius: "12px",
+        // }}
+      >
         {renderWidgetFromWidgetDef(
           data?.widget,
           widgetValue?.value,
