@@ -1,9 +1,11 @@
 envs
 cache
-data
 .DS_Store
 geoenvs
-models
-__pycache__
+__pycache__/
 *.pyc
 envs_
+env/
+data/served
+north-america-latest.osm.pbf
+nyc.osm.pbf

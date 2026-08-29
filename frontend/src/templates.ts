@@ -1,11 +1,9 @@
 export type TemplateKey =
-  | "physical_layer"
+  | "data_layer"
   | "view"
   | "interaction"
-  // | "transformation"
-  | "widget_def"
-  | "comparison_def";
-// | "choice"
+  | "widget"
+  | "comparison";
 // | "join"
 
 // for manhattan area
@@ -16,25 +14,25 @@ export type TemplateKey =
 //   40.757
 // ]
 
-export const physicalLayerTemplate = {
-  physical_layer: {
-    id: "baselayer-0",
-    type: "vector",
-    file_type: "feather",
-    datafile: "chicago",
-    region_of_interest: {
+export const dataLayerTemplate = {
+  data_layer: {
+    id: "A",
+    source: "osm",
+    dtype: "physical",
+
+    roi: {
+      datafile: "chicago",
       type: "bbox",
-      value: [-87.66, 41.86, -87.6, 41.9],
+      value: [-87.66, 41.86, -87.64, 41.88],
     },
-    layers: [
+
+    osm_features: [
       {
-        tag: "buildings",
-        "geom-type": "multipolygon",
-        features: ["height"],
+        feature: "buildings",
+        attributes: ["height"],
       },
       {
-        tag: "roads",
-        "geom-type": "linestring",
+        feature: "roads",
       },
     ],
   },
@@ -43,153 +41,114 @@ export const physicalLayerTemplate = {
 export const viewTemplate = {
   view: [
     {
-      physical_layer: { ref: "baselayer-0" },
-      type: "vector",
-      file_type: "geojson",
-      zoom_pan: true,
-      layers: [
-        {
-          tag: "buildings",
-          "geom-type": "multipolygon",
-          style: {
-            fill: { feature: "height", colormap: "greys" },
-            "stroke-color": "#333333",
-            opacity: 1,
-            "z-index": 1,
-          },
+      ref: "A_buildings",
+      style: {
+        fill: {
+          feature: "height",
+          range: [0, 550],
+          colormap: "blues",
         },
-        {
-          tag: "roads",
-          "geom-type": "linestring",
-          style: { "z-index": 2, "stroke-color": "#444444" },
-        },
-      ],
+        "stroke-color": "#333333",
+        opacity: 1,
+      },
     },
-    // {
-    //   thematic_layer: { ref: "S1" },
-    //   type: "raster",
-    //   style: { colormap: "reds", legend: true, opacity: 0.7 },
-    // },
+    {
+      ref: "A_roads",
+      style: {
+        "stroke-color": "#333333",
+        opacity: 1,
+      },
+    },
   ],
 };
+// {
+//   "view": [
+//     {
+//       "ref_base": "B",
+//       "ref_comp": "A",
 
-export const choiceTemplate = { choice: {} };
+//       "style": {
+//         "opacity": 1,
+//         "colormap": "reds"
+//       }
+//     }
+//   ]
+// }
+
 export const joinTemplate = { join: {} };
-
-export const transformationTemplate = {
-  transformation: {
-    id: "rasters-baselayer-0",
-    physical_layer: { ref: "baselayer-0" },
-    operation: "rasterize",
-    zoom: 16,
-    layer: {
-      tag: "buildings",
-      feature: "height",
-    },
-  },
-};
 
 export const interactionTemplate = {
   interaction: {
-    id: "interaction-0",
-    physicalLayerRef: "baselayer-0",
-    type: "click",
+    ref: "A_buildings",
+    itype: "click",
     action: "remove",
-    layer: {
-      tag: "buildings",
+  },
+};
+
+export const widgetTemplate = {
+  widget: {
+    wtype: "radio-group",
+    variable: "season",
+    choices: ["spring", "summer", "winter"],
+    default: "summer",
+    props: {
+      title: "Season",
+      description: "(select season for shadow analysis)",
+      orientation: "horizontal",
     },
   },
 };
 
-export const widgetDefTemplate = {
-  widget: {
-    id: "widget-0",
-    variable: "season",
-    title: "Season",
-    type: "radio-group",
-    description: "(select season for shadow analysis)",
-    items: ["spring", "summer", "winter"],
-    orientation: "horizontal",
-    "default-value": "summer",
-  },
-};
-
-export const comparisonDefTemplate = {
+export const comparisonTemplate = {
   comparison: {
     key: ["A_shadow", "B_shadow"],
-    metric: "mean",
-    encoding: "bar",
+    metric: "Mean Acc shadow",
+    chart: "table",
+    props: {
+      unit: "minutes",
+    },
   },
 };
 
 export const TEMPLATES: Record<TemplateKey, any> = {
-  physical_layer: physicalLayerTemplate,
+  data_layer: dataLayerTemplate,
   view: viewTemplate,
-  // choice: choiceTemplate,
   // join: joinTemplate,
-  // transformation: transformationTemplate,
   interaction: interactionTemplate,
-  widget_def: widgetDefTemplate,
-  comparison_def: comparisonDefTemplate,
+  widget: widgetTemplate,
+  comparison: comparisonTemplate,
 };
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
-  physical_layer: "data layer",
-  view: "view",
-  // choice: "choice",
+  data_layer: "Data layer",
+  view: "View",
   // join: "join",
-  // transformation: "transformation",
-  interaction: "interaction",
-  widget_def: "widget",
-  comparison_def: "comparison",
+  interaction: "Interaction",
+  widget: "Widget",
+  comparison: "Comparison",
 };
-
-// -------------------------------------------
-// Download data:
-// -------------------------------------------
-
-// from download_data import download_osm_data
-// from download_data import extract_buildings
-// from download_data import extract_roads
-
-// input_filename = "north-america-latest"
-// location = "Los Angeles, USA"
-// output_filename = "la"
-
-// download_osm_data(
-//   input_filename, location, output_filename
-// )
-
-// extract_buildings("la")
-// extract_roads("la")
 
 // -------------------------------------------
 // Conversion to raster:
 // -------------------------------------------
 
-// from convert_to_raster import convert_raster
+// from transformations.raster_conversion.scripts.convert_to_raster import convert_raster
 
-// ref = "A"
-// input = "%s"%(ref)
-// output = "%s_rasters"%(ref)
+// input = "A_buildings"
+// output = "A_rasters"
 
-// tag = "buildings"
-// feature = "height"
+// attribute = "height"
 // zoom = 16
 
-// convert_raster(input, tag, feature, zoom, output)
+// convert_raster(input, attribute, zoom, output)
 
 // -------------------------------------------
 // Run shadow model:
 // -------------------------------------------
 
-// from deep_umbra import run_shadow_model
+// from models.shadow.scripts.deep_umbra import run_shadow_model
 
-// ref = "A"
-// input = '%s_rasters'%(ref)
-// output = '%s_shadow'%(ref)
+// input = 'A_rasters'
+// output = 'A_shadow'
 
-// # season = 'winter'
-// # colormap = 'Blues'
-
-// run_shadow_model(input, season, colormap, output)
+// run_shadow_model(input, season, output)
